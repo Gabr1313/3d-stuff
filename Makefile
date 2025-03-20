@@ -1,24 +1,27 @@
 W_FLAGS = -Wall -Wextra -Wconversion -Wshadow -Wstrict-overflow -Wfloat-equal \
-	-Wformat=2 -Wnull-dereference -Wstrict-aliasing -Wcast-align -fanalyzer \
-	-Wstrict-prototypes -Wpointer-arith -Wundef
+	-Wformat=2 -Wstrict-aliasing -Wcast-align \
+	-Wstrict-prototypes -Wpointer-arith -Wundef -Wnull-dereference
 D_FLAGS = -ggdb -fsanitize=address,undefined
-L_FLAGS = -Ivendor/SDL/include -Lvendor/SDL/build/ -lSDL3 -Wl,-rpath,vendor/SDL/build
+# TODO: remove -lm
+L_FLAGS = -lm -Ivendor/SDL/include -Lvendor/SDL/build/ -lSDL3 -Wl,-rpath,vendor/SDL/build
 
 release: build
-	cc -o build/rel src/linux-first.c \
+	cc -o build/rel src/first-linux.c \
 		-O2 \
 		$(L_FLAGS)
 
 debug: build 
-	cc -o build/dbg src/linux-first.c \
+	cc -o build/dbg src/first-linux.c \
 		-O0 -DDEV \
+		$(W_FLAGS) \
 		$(D_FLAGS) \
 		$(L_FLAGS)
 
-warnings: build 
-	cc -o build/dbg src/linux-first.c \
+analyzer: build 
+	cc -o build/dbg src/first-linux.c \
 		-O0 -DDEV \
 		$(W_FLAGS) \
+		-fanalyzer \
 		$(D_FLAGS) \
 		$(L_FLAGS)
 
@@ -52,6 +55,6 @@ fedora41:
 
 # This does not work: Segmentation fault don't know why
 # static: build
-# 	gcc -o build/first src/linux-first.c \
+# 	gcc -o build/first src/first-linux.c \
 # 		-Ivendor/SDL/include -Lvendor/SDL/build/ -l:libSDL3.a \
 # 		-static -lSDL3 -lm -ldl -lpthread
