@@ -6,7 +6,7 @@
 typedef struct {
 	void *first;
 	void *ptr;
-	u64 cap;
+	size_t cap;
 } Arena;
 
 #define arena_push_struct(arena, type)            (type *)arena_push(     (arena), sizeof(type))
@@ -14,18 +14,19 @@ typedef struct {
 #define arena_push_array(arena, type, count)      (type *)arena_push(     (arena), sizeof(type)*(count))
 #define arena_push_array_zero(arena, type, count) (type *)arena_push_zero((arena), sizeof(type)*(count))
 
-#define _align_up(what) (((u64)(what) + 7ul) & ~7ul);
-#define _align_down(what) ((u64)(what) & ~7ul);
+
+#define _align_down(what) ((u64)(what)         & ~7ul)
+#define _align_up(what)   (((u64)(what) + 7ul) & ~7ul)
 
 // `NULL` is a valid `address`: the OS decides
+// Otherwise cosider the fact that you only have from 0x600000000000 - 0x7fffffffffff
 // if `memory.first == -1` an error occured. Check `errno`
-Arena arena_new(void* address, u64 size) {
+Arena arena_new(u64 size, void *address) {
 	Arena arena = {0};
 	arena.cap = size;
-	arena.first = mmap(address, arena.cap,
-		PROT_READ|PROT_WRITE,
-		MAP_PRIVATE|MAP_ANONYMOUS|MAP_FIXED|MAP_FIXED_NOREPLACE,
-		0, 0);
+	int prot_flags = PROT_READ|PROT_WRITE;
+	int map_flags = MAP_PRIVATE|MAP_ANONYMOUS|(address ? MAP_FIXED|MAP_FIXED_NOREPLACE : 0);
+	arena.first = mmap(address, arena.cap, prot_flags, map_flags, 0, 0);
 	arena.ptr = arena.first;
 	return arena;
 }
@@ -36,7 +37,7 @@ void arena_release(Arena *arena) {
 
 void* arena_push(Arena *arena, u64 bytes) {
 	u64 *retval = arena->ptr;
-	arena->ptr += bytes;
+	arena->ptr = (u8*)(arena->ptr) + bytes;
 	arena->ptr = (void*)_align_up(arena->ptr);
 	return retval;
 }
@@ -50,7 +51,7 @@ void* arena_push_zero(Arena *arena, u64 bytes) {
 }
 
 void arena_pop(Arena *arena, u64 bytes) {
-	arena->ptr -= bytes;
+	arena->ptr = (u8*)(arena->ptr) - bytes;
 	arena->ptr = (void*)_align_down(arena->ptr);
 }
 

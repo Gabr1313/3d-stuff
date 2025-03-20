@@ -7,6 +7,16 @@
 #include "arena.c"
 
 #define FPS 30
+#define TITLE "Gabri's World"
+#define WIDTH  1280
+#define HEIGHT 720
+
+typedef struct {
+	u8* pixels;
+	u32 width;
+	u32 height;
+	b8 running;
+} GameState;
 
 void handle_events(GameState *game_state) {
 	SDL_Event event;
@@ -25,13 +35,38 @@ void handle_events(GameState *game_state) {
 					} break;
 				}
 			} break;
+			case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: {
+				// TODO: resize the game_state?
+			} break;
 		}
 	}
 }
 
+void draw(u8* pixels, SDL_Renderer *renderer, SDL_Texture *texture) {
+	if (!SDL_UpdateTexture(texture, 0, pixels, texture->w * 4)) {
+		SDL_Log("SDL could update the texture! SDL_Error: %s\n", SDL_GetError());
+	}
+	if (!SDL_RenderTexture(renderer, texture, 0, 0)) {
+		SDL_Log("SDL could render texture! SDL_Error: %s\n", SDL_GetError());
+	}
+	if (!SDL_RenderPresent(renderer)) {
+		SDL_Log("SDL could present the texture! SDL_Error: %s\n", SDL_GetError());
+	}
+}
+
+
 int main(void) {
-	SDL_Window *window = NULL;
-	SDL_Renderer *renderer = NULL;
+	// NOTE(gabri): the OS takes care of the memory, so it is only virtually allocated until used
+	u64 mem_cap = giga(1);
+	void *mem_addr = NULL;
+#ifdef DEV
+	mem_addr = (void*)0x600000000000;
+#endif
+	Arena arena = arena_new(mem_cap, mem_addr);
+	if (arena.first == (void*)-1) {
+		SDL_Log("Problems occured when allocating arena (errno: %d)", errno);
+		return 1;
+	}
 
 	// Initialize SDL
 	if (!SDL_Init(SDL_INIT_VIDEO)) {
@@ -39,59 +74,51 @@ int main(void) {
 		return 1;
 	}
 
-	if (!SDL_CreateWindowAndRenderer("Hello World", 1280, 720, SDL_WINDOW_RESIZABLE, &window, &renderer)) {
+	GameState *game_state = arena_push_struct_zero(&arena, GameState);
+	game_state->running = 1;
+	game_state->width  = WIDTH;
+	game_state->height = HEIGHT;
+	game_state->pixels = arena_push_zero(&arena, game_state->width * game_state->height * 4);
+	for (u32 i = 0; i < game_state->width*game_state->height*4; i+=4) {
+		if (i >= game_state->width*game_state->height && i < game_state->width*game_state->height*3) {
+			game_state->pixels[i] = 0xff;
+		} 
+		game_state->pixels[i+3] = 0xff;
+	}
+
+	SDL_Window *window = NULL;
+	SDL_Renderer *renderer = NULL;
+	if (!SDL_CreateWindowAndRenderer(TITLE, (i32)game_state->width, (i32)game_state->height, SDL_WINDOW_RESIZABLE, &window, &renderer)) {
 		SDL_Log("Couldn't create window and renderer: %s", SDL_GetError());
 		return 1;
 	}
 
-	u64 mem_cap = giga(1);
-#ifdef DEV
-	void *mem_add = (void*)0x700000000000;
-#else
-	void *mem_add = NULL;
-#endif
-	Arena arena = arena_new(mem_add, mem_cap);
-	if (arena.first == (void*)-1) {
-		SDL_Log("Problems occured when allocating arena (errno: %d)", errno);
+	SDL_Texture *texture = SDL_CreateTexture(renderer,
+		 SDL_PIXELFORMAT_ARGB8888,
+		 SDL_TEXTUREACCESS_STREAMING,
+		 (i32)game_state->width, (i32)game_state->height);
+	if (!texture) {
+		SDL_Log("Couldn't create texture: %s", SDL_GetError());
 		return 1;
 	}
 
-	GameState *game_state = arena_push_struct_zero(&arena, GameState);
-	game_state->running = 1;
-
-	u64 tick_interval_ns = 1e9 / FPS;
-	u64 frame_end_ns = SDL_GetTicksNS() + tick_interval_ns;
+	f64 tick_interval_ns = 1e9 / FPS;
+	f64 frame_end_ns = (f64)SDL_GetTicksNS() + tick_interval_ns;
 	while (game_state->running) {
 		handle_events(game_state);
+		draw(game_state->pixels, renderer, texture);
 
-		const char *message = "Hello World!";
-		int w = 0, h = 0;
-		float x, y;
-		const float scale = 4.0f;
-
-		/* Center the message and scale it up */
-		SDL_GetRenderOutputSize(renderer, &w, &h);
-		SDL_SetRenderScale(renderer, scale, scale);
-		x = ((w / scale) - SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE * SDL_strlen(message)) / 2;
-		y = ((h / scale) - SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE) / 2;
-
-		/* Draw the message */
-		SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-		SDL_RenderClear(renderer);
-		SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-		SDL_RenderDebugText(renderer, x, y, message);
-		SDL_RenderPresent(renderer);
-
-		u64 tmp_time = SDL_GetTicksNS(); 
+		f64 tmp_time = (f64)SDL_GetTicksNS(); 
 		if (frame_end_ns - tmp_time > 0) {
-			SDL_DelayNS(frame_end_ns - tmp_time);
+			SDL_DelayNS((u64)(frame_end_ns - tmp_time));
 		}
 		frame_end_ns += tick_interval_ns;
 	}
 
-	// NOTE(gabr): I believe I don't need those
+	// NOTE(gabri): The OS can take care of them for me
 	// SDL_DestroyRenderer(renderer);
 	// SDL_DestroyWindow(window);
+	// SDL_DestroyTexture(texture);
 	// SDL_Quit();
 	// arena_release(&arena);
 

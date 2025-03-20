@@ -1,7 +1,8 @@
 -- put the following line in your neovim configuration
 -- vim.o.exrc = true
-vim.keymap.set("n", "<leader>md", "<CMD>wa<CR><CMD>make debug<CR><CMD>copen<CR>", { desc = "[M]ake [D]ebug" })
-vim.keymap.set("n", "<leader>mr", "<CMD>wa<CR><CMD>make release<CR><CMD>copen<CR>", { desc = "[M]ake [R]elease" })
+vim.keymap.set("n", "<leader>md", "<CMD>wa<CR><CMD>make debug<CR><CMD>copen<CR>",     { desc = "[M]ake [D]ebug" })
+vim.keymap.set("n", "<leader>mw", "<CMD>wa<CR><CMD>make warnings<CR><CMD>copen<CR>", { desc = "[M]ake [W]arnings" })
+vim.keymap.set("n", "<leader>mr", "<CMD>wa<CR><CMD>make release<CR><CMD>copen<CR>",   { desc = "[M]ake [R]elease" })
 
 vim.api.nvim_create_autocmd("LspAttach", {
 	callback = function(args)

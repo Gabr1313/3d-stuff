@@ -1,12 +1,26 @@
-relase:
-	gcc -o build/first src/linux-first.c \
-		-Wall -Wextra -O2 \
-		-Ivendor/SDL/include -Lvendor/SDL/build/ -lSDL3 -Wl,-rpath,vendor/SDL/build \
+W_FLAGS = -Wall -Wextra -Wconversion -Wshadow -Wstrict-overflow -Wfloat-equal \
+	-Wformat=2 -Wnull-dereference -Wstrict-aliasing -Wcast-align -fanalyzer \
+	-Wstrict-prototypes -Wpointer-arith -Wundef
+D_FLAGS = -ggdb -fsanitize=address,undefined
+L_FLAGS = -Ivendor/SDL/include -Lvendor/SDL/build/ -lSDL3 -Wl,-rpath,vendor/SDL/build
 
-debug:  
-	gcc -o build/first src/linux-first.c -DDEV \
-		-Wall -Wextra -O0 -ggdb -fsanitize=address,undefined \
-		-Ivendor/SDL/include -Lvendor/SDL/build/ -lSDL3 -Wl,-rpath,vendor/SDL/build \
+release: build
+	cc -o build/rel src/linux-first.c \
+		-O2 \
+		$(L_FLAGS)
+
+debug: build 
+	cc -o build/dbg src/linux-first.c \
+		-O0 -DDEV \
+		$(D_FLAGS) \
+		$(L_FLAGS)
+
+warnings: build 
+	cc -o build/dbg src/linux-first.c \
+		-O0 -DDEV \
+		$(W_FLAGS) \
+		$(D_FLAGS) \
+		$(L_FLAGS)
 
 build: 
 	mkdir -p build
@@ -15,6 +29,7 @@ clean:
 	rm -rf build
 
 
+# TODO: use the SDL package: you don't need to `git clone`
 # https://github.com/libsdl-org/SDL/blob/main/docs/README-cmake.md
 sdl: vendor/SDL
 	cd vendor/SDL && \
