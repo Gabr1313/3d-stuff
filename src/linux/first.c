@@ -128,6 +128,10 @@ i32 main(void) {
 	DLLStats dl    = {0};
 	dl.name        = DL_NAME;
 	dl.copy_name   = DL_COPY_NAME;
+	b8 res = dl_update(&dl);
+	assert(res, "Could not load dynamic library");
+	res = dl_load_func(&dl, "game_update", dlf.game_update);
+	assert(res, "Could not load dynamic library function");
 #else
 	dlf.game_update = game_update;
 #endif
@@ -139,7 +143,8 @@ i32 main(void) {
 #ifdef DEV
 		if (dl_update(&dl)) {
 			dbg("Dynamic Library reloaded: %s", dl.name);
-			dl_load_func(&dl, "game_update", dlf.game_update);
+			res = dl_load_func(&dl, "game_update", dlf.game_update);
+			assert(res, "Could not load dynamic library function");
 		}
 #endif
 		u64 time_prev_frame = time_now;

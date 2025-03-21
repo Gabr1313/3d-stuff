@@ -17,13 +17,14 @@ void func_stub(void) {}
 
 #define dl_load_func(dl, fn_name_dl, fn) _dl_load_func(dl, fn_name_dl, (void(**)(void))&fn)
 
-void _dl_load_func(DLLStats *dl, char* fn_name_dl, void(**fn)(void)) {
+b8 _dl_load_func(DLLStats *dl, char* fn_name_dl, void(**fn)(void)) {
     *fn = dlsym(dl->ptr, fn_name_dl);
     if (!*fn) {
 		*fn = (void(*)(void))func_stub;
         err("Error finding symbol: %s\n", dlerror());
-        return ;
+        return false;
     }
+	return true;
 }
 
 b8 dl_update(DLLStats *dl) {
