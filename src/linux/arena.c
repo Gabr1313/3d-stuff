@@ -2,11 +2,13 @@
 
 #include <sys/mman.h>
 
+#include "../types.h"
+
 // push aligned 64-bit
 typedef struct {
 	void *first;
 	void *ptr;
-	size_t cap;
+	u64 cap;
 } Arena;
 
 #define arena_push_struct(arena, type)            (type *)arena_push(     (arena), sizeof(type))

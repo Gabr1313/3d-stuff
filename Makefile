@@ -1,36 +1,47 @@
 W_FLAGS = -Wall -Wextra -Wconversion -Wshadow -Wstrict-overflow -Wfloat-equal \
 	-Wformat=2 -Wstrict-aliasing -Wcast-align \
 	-Wstrict-prototypes -Wpointer-arith -Wundef -Wnull-dereference
-D_FLAGS = -ggdb -fsanitize=address,undefined
-# TODO: remove -lm
-L_FLAGS = -lm -Ivendor/SDL/include -Lvendor/SDL/build/ -lSDL3 -Wl,-rpath,vendor/SDL/build
+DEBUG_FLAGS = -DDBG -ggdb -fsanitize=address,undefined
+SDL_FLAGS = -Ivendor/SDL/include -Lvendor/SDL/build/ -lSDL3 -Wl,-rpath,vendor/SDL/build 
+LINK_FLAGS = -lm
 
 release: build
-	cc -o build/rel src/first-linux.c \
+	gcc -o build/release src/linux/first.c \
 		-O2 \
-		$(L_FLAGS)
+		$(SDL_FLAGS) $(LINK_FLAGS)
+
+fast: build
+	gcc -o build/game.so src/game.c \
+		-O2 -DDEV -shared -fpic \
+		$(LINK_FLAGS)
+	gcc -o build/fast src/linux/first.c \
+		-O2 -DDEV \
+		$(SDL_FLAGS)
 
 debug: build 
-	cc -o build/dbg src/first-linux.c \
+	gcc -o build/game.so src/game.c \
+		-O0 -DDEV -shared -fpic \
+		$(DEBUG_FLAGS) \
+		$(W_FLAGS)
+	gcc -o build/debug src/linux/first.c \
 		-O0 -DDEV \
+		$(DEBUG_FLAGS) \
 		$(W_FLAGS) \
-		$(D_FLAGS) \
-		$(L_FLAGS)
+		$(SDL_FLAGS) $(LINK_FLAGS)
 
 analyzer: build 
-	cc -o build/dbg src/first-linux.c \
+	gcc -o build/debug src/linux/first.c \
 		-O0 -DDEV \
-		$(W_FLAGS) \
-		-fanalyzer \
-		$(D_FLAGS) \
-		$(L_FLAGS)
+		-fanalyzer $(W_FLAGS)\
+		$(DEBUG_FLAGS) \
+		$(SDL_FLAGS) $(LINK_FLAGS)
+
 
 build: 
 	mkdir -p build
 
 clean:
 	rm -rf build
-
 
 # TODO: use the SDL package: you don't need to `git clone`
 # https://github.com/libsdl-org/SDL/blob/main/docs/README-cmake.md
@@ -55,6 +66,6 @@ fedora41:
 
 # This does not work: Segmentation fault don't know why
 # static: build
-# 	gcc -o build/first src/first-linux.c \
+# 	gcc -o build/first src/linux-first.c \
 # 		-Ivendor/SDL/include -Lvendor/SDL/build/ -l:libSDL3.a \
 # 		-static -lSDL3 -lm -ldl -lpthread
