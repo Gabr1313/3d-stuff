@@ -1,6 +1,11 @@
-#ifndef DL_NAME_COPY
-#define DL_NAME_COPY ".dll_copy.so"
-#endif
+#pragma once
+
+typedef struct {
+	char  *name;
+	char  *copy_name;
+	void  *ptr;
+	i64    last_update;
+} DLLStats;
 
 #include <sys/stat.h>
 #include <sys/sendfile.h>
@@ -8,71 +13,60 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-typedef struct {
-	void  *ptr;
-	char  *name;
-	time_t last_update;
-} DLLStats;
+void func_stub(void) {}
 
-#ifdef DEV
-void (*game_update)(GameState*, Canvas*);
-void game_update_stub(GameState*, Canvas*) {}
+#define dl_load_func(dl, fn_name_dl, fn) _dl_load_func(dl, fn_name_dl, (void(**)(void))&fn)
 
-void update_dl(DLLStats* dl) {
+void _dl_load_func(DLLStats *dl, char* fn_name_dl, void(**fn)(void)) {
+    *fn = dlsym(dl->ptr, fn_name_dl);
+    if (!*fn) {
+		*fn = (void(*)(void))func_stub;
+        err("Error finding symbol: %s\n", dlerror());
+        return ;
+    }
+}
+
+b8 dl_update(DLLStats *dl) {
 	struct stat stats;
     if (stat(dl->name, &stats)) {
         dbg("File not found: %s", dl->name);
-        return;
+        return false;
     }
 
 	time_t last_update = stats.st_mtime;
 	if (dl->last_update == last_update || stats.st_size == 0) {
-		return;
+		return false;
 	}
 	dl->last_update = last_update;
-
-	game_update = game_update_stub;
 
     if (dl->ptr) {
 		dlclose(dl->ptr);
 	}
 
-	char *copied_name = DL_NAME_COPY;
+	// NOTE(gabri): you can't use the dll file directly for hot reloading (I don't know why)
 	i32 src_fd = open(dl->name, O_RDONLY);
     if (src_fd == -1) {
-        dbge("Could not open %s", dl->name);
-		return;
+        err("Could not open %s", dl->name);
+		return false;
     }
-    i32 dst_fd = open(copied_name, O_WRONLY|O_CREAT|O_TRUNC, 00644); // NOTE(gabri): do not remove leading zeroes!
+    i32 dst_fd = open(dl->copy_name, O_WRONLY|O_CREAT|O_TRUNC, 00644); // NOTE(gabri): do not remove leading zeroes!
     if (dst_fd == -1) {
-        dbge("Could not open %s", copied_name);
+        err("Could not open %s", dl->copy_name);
 		close(src_fd);
-		return;
+		return false;
     }
 
     if (sendfile(dst_fd, src_fd, NULL, (u64)stats.st_size) != stats.st_size) {
-        dbge("Error coping file %s to file %s", dl->name, copied_name);
-		return;
+        err("Error coping file %s to file %s", dl->name, dl->copy_name);
+		return false;
     }
 	close(src_fd);
 	close(dst_fd);
 
-    dl->ptr = dlopen(copied_name, RTLD_LAZY);
+    dl->ptr = dlopen(dl->copy_name, RTLD_LAZY);
     if (!dl->ptr) {
-        dbge("Error loading library: %s\n", dlerror());
-        return;
+        err("Error loading library: %s\n", dlerror());
+		return false;
     }
-
-    game_update = dlsym(dl->ptr, "game_update");
-    if (!game_update) {
-		game_update = game_update_stub;
-        dbge("Error finding symbol: %s\n", dlerror());
-        return ;
-    }
-	dbg("Dynamic Library reloaded: %s", dl->name);
+	return true;
 }
-
-#else
-#include "../game.c"
-#define update_dl(dl)
-#endif
