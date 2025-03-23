@@ -1,4 +1,3 @@
-
 // TODO: make fps this an easy choice
 #define FPS 30
 #define TITLE "Gabri's World"
@@ -7,16 +6,17 @@
 #define WINDOW_INITIAL_POS_X 960
 #define WINDOW_INITIAL_POS_Y 540
 
-#define DL_NAME      "build/game.so"
-#define DL_COPY_NAME "build/game_copy.so"
+#define DL_NAME "build/game.so"
 
 #include <SDL3/SDL.h>
+#include <errno.h>
 
 #include "../game.h"
 #include "../types.h"
+
+#include "../game.c"
 #include "arena.c"
 #include "utils.c"
-#include "../game.c"
 #ifdef DEV
 #include "dll.c"
 #endif
@@ -75,7 +75,7 @@ i32 main(void) {
 #endif
 	Arena arena = arena_new(mem_cap, mem_addr);
 	if (arena.first == (void*)-1) {
-		err("Problems occured when allocating arena");
+		err("Problems occured when allocating arena: %s", strerror(errno));
 		return 1;
 	}
 
@@ -125,12 +125,11 @@ i32 main(void) {
 
 	DLFuncs dlf    = {0};
 #ifdef DEV
-	DLLStats dl    = {0};
+	DLStats dl     = {0};
 	dl.name        = DL_NAME;
-	dl.copy_name   = DL_COPY_NAME;
-	b8 res = dl_update(&dl);
-	assert(res, "Could not load dynamic library");
-	res = dl_load_func(&dl, "game_update", dlf.game_update);
+	i32 res = dl_update(&dl);
+	assert(res == 1, "Could not load dynamic library");
+	res = dl_load_func(&dl, "game_update", &dlf.game_update);
 	assert(res, "Could not load dynamic library function");
 #else
 	dlf.game_update = game_update;
@@ -141,9 +140,11 @@ i32 main(void) {
 	u64 frame_end_ns     = time_start;
 	while (game_state->running) {
 #ifdef DEV
-		if (dl_update(&dl)) {
+		res = dl_update(&dl);
+		if (res) {
+			assert(res == 1, "Could not load dynamic library");
 			dbg("Dynamic Library reloaded: %s", dl.name);
-			res = dl_load_func(&dl, "game_update", dlf.game_update);
+			res = dl_load_func(&dl, "game_update", &dlf.game_update);
 			assert(res, "Could not load dynamic library function");
 		}
 #endif

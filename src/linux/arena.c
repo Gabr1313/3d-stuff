@@ -4,7 +4,7 @@
 
 #include "../types.h"
 
-// push aligned 64-bit
+// 64-bit aligned
 typedef struct {
 	void *first;
 	void *ptr;
@@ -16,13 +16,12 @@ typedef struct {
 #define arena_push_array(arena, type, count)      (type *)arena_push(     (arena), sizeof(type)*(count))
 #define arena_push_array_zero(arena, type, count) (type *)arena_push_zero((arena), sizeof(type)*(count))
 
-
 #define _align_down(what) ((u64)(what)         & ~7ul)
 #define _align_up(what)   (((u64)(what) + 7ul) & ~7ul)
 
-// `NULL` is a valid `address`: the OS decides
-// Otherwise cosider the fact that you only have from 0x600000000000 - 0x7fffffffffff
 // if `memory.first == -1` an error occured. Check `errno`
+// `NULL` is a valid `address`: the OS decides
+// Otherwise cosider the fact that on Linux you only have from 0x600000000000 - 0x7fffffffffff
 Arena arena_new(u64 size, void *address) {
 	Arena arena = {0};
 	arena.cap = size;
