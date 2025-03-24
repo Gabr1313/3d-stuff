@@ -22,23 +22,57 @@
 #endif
 
 typedef struct {
-	void (*game_update)(GameState*, Canvas*);
+	void (*game_update)(GameState*, GameInput*, Canvas*);
 } DLFuncs;
 
-void handle_events(GameState *game_state) {
+void handle_events(GameInput *input) {
 	SDL_Event event;
 	while (SDL_PollEvent(&event) != 0) {
 		switch (event.type) {
 			case SDL_EVENT_QUIT: {
-				game_state->running = 0;
+				input->running = 0;
 			} break;
 			case SDL_EVENT_KEY_DOWN: {
 				switch (event.key.key) {
 					case SDLK_ESCAPE: {
-						game_state->running = 0;
+						input->running = false;
 					} break;
 					case SDLK_Q: {
-						game_state->running = 0;
+						input->running = false;
+					} break;
+					case SDLK_W: {
+						input->up = true;
+					} break;
+					case SDLK_A: {
+						input->left = true;
+					} break;
+					case SDLK_S: {
+						input->down = true;
+					} break;
+					case SDLK_D: {
+						input->right = true;
+					} break;
+				}
+			} break;
+			case SDL_EVENT_KEY_UP: {
+				switch (event.key.key) {
+					case SDLK_ESCAPE: {
+						input->running = true;
+					} break;
+					case SDLK_Q: {
+						input->running = true;
+					} break;
+					case SDLK_W: {
+						input->up = false;
+					} break;
+					case SDLK_A: {
+						input->left = false;
+					} break;
+					case SDLK_S: {
+						input->down = false;
+					} break;
+					case SDLK_D: {
+						input->right = false;
 					} break;
 				}
 			} break;
@@ -121,16 +155,16 @@ i32 main(void) {
 	assert(pitch ==  texture->w * 4, "the pitch should be 4 times the texture width");
 
 	GameState *game_state = arena_push_struct_zero(&arena, GameState);
-	game_state->running = 1;
+	GameInput input = { .running = true };
 
 	DLFuncs dlf    = {0};
 #ifdef DEV
 	DLStats dl     = {0};
 	dl.name        = DL_NAME;
 	i32 res = dl_update(&dl);
-	assert(res == 1, "Could not load dynamic library");
+	assert(res == 1, "Could not load dynamic library %s", dl.name);
 	res = dl_load_func(&dl, "game_update", &dlf.game_update);
-	assert(res, "Could not load dynamic library function");
+	assert(res, "Could not load function %s from dynamic library %s", "game_update", dl.name);
 #else
 	dlf.game_update = game_update;
 #endif
@@ -138,25 +172,25 @@ i32 main(void) {
 	u64 time_start       = SDL_GetTicksNS();
 	u64 time_now         = time_start;
 	u64 frame_end_ns     = time_start;
-	while (game_state->running) {
-#ifdef DEV
-		res = dl_update(&dl);
-		if (res) {
-			assert(res == 1, "Could not load dynamic library");
-			dbg("Dynamic Library reloaded: %s", dl.name);
-			res = dl_load_func(&dl, "game_update", &dlf.game_update);
-			assert(res, "Could not load dynamic library function");
-		}
-#endif
+	while (input.running) {
 		u64 time_prev_frame = time_now;
 		time_now = SDL_GetTicksNS();
 		game_state->dt_ns   = time_now - time_prev_frame;
 		game_state->time_ns = time_now - time_start;
 
-		handle_events(game_state);
-		dlf.game_update(game_state, &canvas);
+		handle_events(&input);
+		dlf.game_update(game_state, &input, &canvas);
 		draw(canvas.pixels, renderer, texture);
 
+#ifdef DEV
+		res = dl_update(&dl);
+		if (res) {
+			assert(res == 1, "Could not load dynamic library %s", dl.name);
+			dbg("Dynamic Library reloaded: %s", dl.name);
+			res = dl_load_func(&dl, "game_update", &dlf.game_update);
+			assert(res, "Could not load dynamic library function %s", dl.name);
+		}
+#endif
 		u64 tmp_time = SDL_GetTicksNS(); 
 		if (fps > 0) {
 			frame_end_ns += (u64)1e9 / fps;

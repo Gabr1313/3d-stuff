@@ -32,8 +32,9 @@ debug: build
 analyzer: build 
 	gcc -o build/debug src/linux/first.c \
 		-O0 -DDEV \
-		-fanalyzer $(W_FLAGS)\
 		$(DEBUG_FLAGS) \
+		$(W_FLAGS) \
+		-fanalyzer -WnoWanalyzer-null-dereference \
 		$(SDL_FLAGS) $(LINK_FLAGS)
 
 
