@@ -7,12 +7,15 @@
 
 #include "types.h"
 
+#include "vec.c"
+
 typedef struct {
 	u64 time_ns;
 	u64 dt_ns;
 
-	f32 camera_x;
-	f32 camera_y;
+	Vec3 camera;
+	Vec3 camera_right;
+	Vec3 camera_up;
 } GameState;
 
 typedef struct {
@@ -22,7 +25,10 @@ typedef struct {
 	b8 left;
 	b8 down;
 	b8 right;
-} GameInput;
+
+	f32 deltaMouseX;
+	f32 deltaMouseY;
+} Input;
 
 typedef struct {
 	u8* pixels;

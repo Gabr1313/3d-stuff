@@ -31,7 +31,7 @@ b8 _dl_load_func(DLStats *dl, char* fn_name_dl, void(**fn)(void)) {
 i32 dl_update(DLStats *dl) {
 	struct stat stats;
     if (stat(dl->name, &stats)) {
-        dbg("File not found: %s", dl->name);
+        log("File not found: %s", dl->name);
         return 0;
     }
 

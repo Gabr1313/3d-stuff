@@ -22,10 +22,10 @@
 #endif
 
 typedef struct {
-	void (*game_update)(GameState*, GameInput*, Canvas*);
+	void (*game_update)(GameState*, Input*, Canvas*);
 } DLFuncs;
 
-void handle_events(GameInput *input) {
+void read_input(Input *input, SDL_Window* window) {
 	SDL_Event event;
 	while (SDL_PollEvent(&event) != 0) {
 		switch (event.type) {
@@ -51,6 +51,9 @@ void handle_events(GameInput *input) {
 					} break;
 					case SDLK_D: {
 						input->right = true;
+					} break;
+					case SDLK_F: { // focus
+						SDL_SetWindowRelativeMouseMode(window, !SDL_GetWindowRelativeMouseMode(window));
 					} break;
 				}
 			} break;
@@ -81,6 +84,7 @@ void handle_events(GameInput *input) {
 			} break;
 		}
 	}
+	SDL_GetRelativeMouseState(&input->deltaMouseX, &input->deltaMouseY);
 }
 
 void draw(u8* pixels, SDL_Renderer *renderer, SDL_Texture *texture) {
@@ -136,10 +140,9 @@ i32 main(void) {
 
 #if DEV
 	if (!SDL_SetWindowPosition(window, WINDOW_INITIAL_POS_X, WINDOW_INITIAL_POS_Y)) {
-		dbg("Window can't be repositioned: %s", SDL_GetError());
+		log("Window can't be repositioned: %s", SDL_GetError());
 	}
 #endif
-
 
 	SDL_Texture *texture = SDL_CreateTexture(renderer,
 		 SDL_PIXELFORMAT_ARGB8888,
@@ -155,7 +158,8 @@ i32 main(void) {
 	assert(pitch ==  texture->w * 4, "the pitch should be 4 times the texture width");
 
 	GameState *game_state = arena_push_struct_zero(&arena, GameState);
-	GameInput input = { .running = true };
+	game_state->camera = (Vec3){.e = {1, 0, 0}};
+	Input input = { .running = true };
 
 	DLFuncs dlf    = {0};
 #ifdef DEV
@@ -178,7 +182,7 @@ i32 main(void) {
 		game_state->dt_ns   = time_now - time_prev_frame;
 		game_state->time_ns = time_now - time_start;
 
-		handle_events(&input);
+		read_input(&input, window);
 		dlf.game_update(game_state, &input, &canvas);
 		draw(canvas.pixels, renderer, texture);
 
@@ -186,7 +190,7 @@ i32 main(void) {
 		res = dl_update(&dl);
 		if (res) {
 			assert(res == 1, "Could not load dynamic library %s", dl.name);
-			dbg("Dynamic Library reloaded: %s", dl.name);
+			log("Dynamic Library reloaded: %s", dl.name);
 			res = dl_load_func(&dl, "game_update", &dlf.game_update);
 			assert(res, "Could not load dynamic library function %s", dl.name);
 		}
@@ -198,7 +202,7 @@ i32 main(void) {
 				// dbg("Extra time: %fms", ((f64)frame_end_ns - (f64)tmp_time)*1e-6);
 				SDL_DelayNS(frame_end_ns - tmp_time);
 			} else {
-				dbg("Time not met: %fms", ((f64)tmp_time - (f64)frame_end_ns)*1e-6);
+				log("Time not met: %fms", ((f64)tmp_time - (f64)frame_end_ns)*1e-6);
 				frame_end_ns = tmp_time; 
 			}
 		} 
@@ -211,6 +215,6 @@ i32 main(void) {
 	// SDL_Quit();
 	// arena_release(&arena);
 
-	dbg("Game closed");
+	log("Game closed");
 	return 0;
 }

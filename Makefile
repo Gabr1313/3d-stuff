@@ -1,6 +1,8 @@
 W_FLAGS = -Wall -Wextra -Wconversion -Wshadow -Wstrict-overflow -Wfloat-equal \
 	-Wformat=2 -Wstrict-aliasing -Wcast-align \
 	-Wstrict-prototypes -Wpointer-arith -Wundef -Wnull-dereference
+MILD_W_FLAGS = $(W_FLAGS) -Wno-unused-variable -Wno-unused-parameter
+EXTRA_W_FLAGS = -fanalyzer -Wno-analyzer-null-dereference
 DEBUG_FLAGS = -DDBG -ggdb -fsanitize=address,undefined
 SDL_FLAGS = -Ivendor/SDL/include -Lvendor/SDL/build/ -lSDL3 -Wl,-rpath,vendor/SDL/build 
 LINK_FLAGS = -lm
@@ -22,11 +24,11 @@ debug: build
 	gcc -o build/game.so src/game.c \
 		-O0 -DDEV -shared -fpic \
 		$(DEBUG_FLAGS) \
-		$(W_FLAGS)
+		$(MILD_W_FLAGS)
 	gcc -o build/debug src/linux/first.c \
 		-O0 -DDEV \
 		$(DEBUG_FLAGS) \
-		$(W_FLAGS) \
+		$(MILD_W_FLAGS) \
 		$(SDL_FLAGS) $(LINK_FLAGS)
 
 analyzer: build 
@@ -34,7 +36,7 @@ analyzer: build
 		-O0 -DDEV \
 		$(DEBUG_FLAGS) \
 		$(W_FLAGS) \
-		-fanalyzer -WnoWanalyzer-null-dereference \
+		$(EXTRA_W_FLAGS) \
 		$(SDL_FLAGS) $(LINK_FLAGS)
 
 
