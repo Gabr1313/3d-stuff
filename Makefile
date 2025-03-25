@@ -9,16 +9,16 @@ LINK_FLAGS = -lm
 
 release: build
 	gcc -o build/release src/linux/first.c \
-		-O2 \
+		-O3 -march=native \
 		$(SDL_FLAGS) $(LINK_FLAGS)
 
 fast: build
 	gcc -o build/game.so src/game.c \
-		-O2 -DDEV -shared -fpic \
+		-O3 -march=native -DDEV -shared -fpic \
 		$(LINK_FLAGS)
 	gcc -o build/fast src/linux/first.c \
-		-O2 -DDEV \
-		$(SDL_FLAGS)
+		-O3 -march=native -DDEV \
+		$(SDL_FLAGS) $(LINK_FLAGS)
 
 debug: build 
 	gcc -o build/game.so src/game.c \
@@ -38,7 +38,6 @@ analyzer: build
 		$(W_FLAGS) \
 		$(EXTRA_W_FLAGS) \
 		$(SDL_FLAGS) $(LINK_FLAGS)
-
 
 build: 
 	mkdir -p build

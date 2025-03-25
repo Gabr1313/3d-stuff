@@ -3,8 +3,8 @@
 #define TITLE "Gabri's World"
 #define WIDTH  960
 #define HEIGHT 540
-#define WINDOW_INITIAL_POS_X 960
-#define WINDOW_INITIAL_POS_Y 540
+#define WINDOW_INITIAL_POS_X 0
+#define WINDOW_INITIAL_POS_Y 0
 
 #define DL_NAME "build/game.so"
 
@@ -14,12 +14,15 @@
 #include "../game.h"
 #include "../types.h"
 
-#include "../game.c"
+
 #include "arena.c"
 #include "utils.c"
 #ifdef DEV
 #include "dll.c"
+#else
+#include "../game.c"
 #endif
+
 
 typedef struct {
 	void (*game_update)(GameState*, Input*, Canvas*);
@@ -41,13 +44,13 @@ void read_input(Input *input, SDL_Window* window) {
 						input->running = false;
 					} break;
 					case SDLK_W: {
-						input->up = true;
+						input->forward = true;
 					} break;
 					case SDLK_A: {
 						input->left = true;
 					} break;
 					case SDLK_S: {
-						input->down = true;
+						input->backward = true;
 					} break;
 					case SDLK_D: {
 						input->right = true;
@@ -66,13 +69,13 @@ void read_input(Input *input, SDL_Window* window) {
 						input->running = true;
 					} break;
 					case SDLK_W: {
-						input->up = false;
+						input->forward = false;
 					} break;
 					case SDLK_A: {
 						input->left = false;
 					} break;
 					case SDLK_S: {
-						input->down = false;
+						input->backward = false;
 					} break;
 					case SDLK_D: {
 						input->right = false;
@@ -84,10 +87,10 @@ void read_input(Input *input, SDL_Window* window) {
 			} break;
 		}
 	}
-	SDL_GetRelativeMouseState(&input->deltaMouseX, &input->deltaMouseY);
+	SDL_GetRelativeMouseState(&input->dmouse_x, &input->dmouse_y);
 }
 
-void draw(u8* pixels, SDL_Renderer *renderer, SDL_Texture *texture) {
+void get_texture_pixels_and_present(u8** pixels, SDL_Renderer *renderer, SDL_Texture *texture) {
 	SDL_UnlockTexture(texture);
 
 	if (!SDL_RenderTexture(renderer, texture, 0, 0)) {
@@ -98,7 +101,7 @@ void draw(u8* pixels, SDL_Renderer *renderer, SDL_Texture *texture) {
 	}
 
 	i32 pitch;
-	if (!SDL_LockTexture(texture, NULL, (void**)&pixels, &pitch)) {
+	if (!SDL_LockTexture(texture, NULL, (void**)pixels, &pitch)) {
 		err("SDL could not unlock texture! SDL_Error: %s\n", SDL_GetError());
 	}
 	assert(pitch == texture->w * 4, "the pitch should be 4 times the texture width");
@@ -158,7 +161,10 @@ i32 main(void) {
 	assert(pitch ==  texture->w * 4, "the pitch should be 4 times the texture width");
 
 	GameState *game_state = arena_push_struct_zero(&arena, GameState);
-	game_state->camera = (Vec3){.e = {1, 0, 0}};
+	game_state->camera         = (Vec3){.e = {1, 0, 0}};
+	game_state->position       = (Vec3){.e = {-10, 0, 0}};
+	game_state->sphere_center  = (Vec3){.e = {0, 0, 0}};
+	game_state->sphere_radius  = 1;
 	Input input = { .running = true };
 
 	DLFuncs dlf    = {0};
@@ -179,12 +185,12 @@ i32 main(void) {
 	while (input.running) {
 		u64 time_prev_frame = time_now;
 		time_now = SDL_GetTicksNS();
-		game_state->dt_ns   = time_now - time_prev_frame;
 		game_state->time_ns = time_now - time_start;
+		input.dt = (f32)(time_now - time_prev_frame)*1e-9f;
 
 		read_input(&input, window);
 		dlf.game_update(game_state, &input, &canvas);
-		draw(canvas.pixels, renderer, texture);
+		get_texture_pixels_and_present(&canvas.pixels, renderer, texture);
 
 #ifdef DEV
 		res = dl_update(&dl);

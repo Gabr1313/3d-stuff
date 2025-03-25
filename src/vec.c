@@ -35,10 +35,17 @@ f32 vec3_length2(Vec3 a) {
 	return vec3_dot(a, a);
 }
 
+f32 vec3_dist2(Vec3 a, Vec3 b) {
+	return vec3_length2(vec3_sub(a, b));
+}
+
 f32 vec3_length(Vec3 a) {
 	return sqrtf(vec3_length2(a));
 }
 
+f32 vec3_dist(Vec3 a, Vec3 b) {
+	return vec3_length(vec3_sub(a, b));
+}
 Vec3 vec3_norm(Vec3 a) {
 	return vec3_sca(a, 1/vec3_length(a));
 }

@@ -73,8 +73,8 @@ Vec3 quat_rot(Quat a, Quat axis) {
 Vec3 vec3_rot(Vec3 a, Vec3 axis, f32 alpha) {
 	assert(vec3_is_norm(axis), "the rotation axis should be normalized, however its lenght is %f", vec3_length(axis));
 
-	f32 cosine = cosf(alpha);
-	f32 sine   = sinf(alpha);
+	f32 cosine = cosf(alpha/2);
+	f32 sine   = sinf(alpha/2);
 
 	Quat mid = {.e = {0, a.x, a.y, a.z}};
 
