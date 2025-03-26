@@ -1,7 +1,7 @@
 # Just a repo where I play with 3d stuff
 
 > [!WARNING]  
-> This file could be left some commit behind in the feature
+> The README might not be up to date
 
 ## Compilation
 For compiling this project, you need:
