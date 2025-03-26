@@ -1,6 +1,9 @@
 #pragma once
 
 #include <stdio.h>
+
+#include "../types.h"
+
 #define _log(stream, format, ...)  fprintf(stream, format "\n", ##__VA_ARGS__)
 #define err(...)  _log(stderr, "[ERROR] " __VA_ARGS__)
 
@@ -28,3 +31,4 @@
 
 #define max(a, b) (a) > (b) ? (a) : (b)
 #define min(a, b) (a) < (b) ? (a) : (b)
+

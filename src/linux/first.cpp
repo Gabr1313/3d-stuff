@@ -214,7 +214,7 @@ i32 main(void) {
 		game_state->time_ns = time_now - time_start;
 		input.dt = f32(time_now - time_prev_frame)*1e-9f;
 
-		// err("FPS: %f", 1/input.dt);
+		err("FPS: %f", 1/input.dt);
 
 		read_input(&input, window);
 		dlf.game_update(game_state, &input, &canvas);

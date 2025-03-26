@@ -15,8 +15,40 @@
 #define WORLD_MAX_OBJ_DIST 20
 #define FOV_X (90.f * PI / 180)
 
+static inline f32 op_union(f32 d1, f32 d2) {
+	return min(d1,d2); 
+}
+
+static inline f32 op_subtract(f32 d1, f32 d2) { 
+	return max(d1,-d2); 
+}
+
+static inline f32 op_intersect(f32 d1, f32 d2) { 
+	return max(d1,d2); 
+}
+
+
+static inline f32 clamp(f32 a, f32 mn, f32 mx) {
+	return max(min(a, mx), mn);
+}
+
+static inline f32 op_smooth(f32 d1, f32 d2, f32 k) {
+    f32 h = clamp(0.5f + 0.5f*(d2-d1)/k, 0.0f, 1.0f);
+    return h*d1 + (1.0f-h)*d2 - k*h*(1.0f-h);
+}
+
 f32 sphere_distance(Vec3 position, Vec3 center, f32 radius) {
 	return length(position - center) - radius;
+}
+
+f32 cylinder1_distance(Vec3 p, Vec3 c, f32 r) {
+	Vec3 v = p-c;
+	return sqrtf(v.y*v.y + v.z*v.z) - r;
+}
+
+f32 cylinder2_distance(Vec3 p, Vec3 c, f32 r) {
+	Vec3 v = p-c;
+	return sqrtf(v.x*v.x + v.z*v.z) - r;
 }
 
 f32 cube_distance(Vec3 position, Vec3 center, Vec3 radius) {
@@ -26,14 +58,14 @@ f32 cube_distance(Vec3 position, Vec3 center, Vec3 radius) {
 	return (inside > 0) ? outside : inside;
 }
 
-b8 march_ray(Vec3 position, Vec3 direction) {
+b8 march_ray(Vec3 position, Vec3 direction, f32 time) {
 	assert(is_norm(direction), "direction is not normalized");
 	f32 r = 1;
 	for (i32 i = 0; i < RAY_MARCH_MAX_ITERATION; ++i) {
 		f32 dist = cube_distance(position, vec3(10, 0, 0), vec3(r, r, r));
-		dist     = min(dist, sphere_distance(position, vec3(10, 0, 0) + vec3(0, 0, 1.7f), r));
-		dist     = max(dist, -cube_distance(position, vec3(10, 0, 2.4f), vec3(r*2, r*2, r*0.5f)));
-		dist     = min(dist, cube_distance(position, vec3(0, 0, 10), vec3(r, r, r)));
+		dist     = op_subtract(dist, cylinder1_distance(position, vec3(0, 0, 0), 0.8f));
+		dist     = op_subtract(dist, cylinder2_distance(position, vec3(10, 0, 0), 0.8f));
+		dist     = op_smooth(dist, sphere_distance(position, vec3(10, 0, 1.0f + sinf(time)), r/3), 0.3f);
 
 		position = position + dist*direction;
 		if (dist < RAY_MARCH_DIST_MIN) {
@@ -67,7 +99,7 @@ void draw(GameState *state, Canvas *canvas) {
 		Vec3 dir = dir_left;
 		u32 delta_i = i * canvas->width;
 		for (u32 j = 0; j < canvas->width; ++j) {
-			b8 stopped = march_ray(state->position, norm(dir));
+			b8 stopped = march_ray(state->position, norm(dir), f32(state->time_ns)*1e-9f);
 			Color color = !stopped ? (Color){.e = {
 				u8(127*dir.x+127), 
 				u8(127*dir.y+127), 
@@ -86,7 +118,6 @@ void draw(GameState *state, Canvas *canvas) {
 
 b8 update_camera_left(Vec3 camera, Vec3 *camera_left_ptr) {
 	Vec3 camera_left = *camera_left_ptr;
-	Vec3 old_camera_left = old_camera_left;
 	if (fabs(camera.y) > fabs(camera.x) && fabs(camera.y) > 0) {
 		camera_left = norm(vec3(-1, (camera.x/camera.y), 0));
 		if (camera.y < 0) {
