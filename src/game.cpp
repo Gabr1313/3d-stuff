@@ -9,10 +9,10 @@
 
 #define PI 3.14159265358979323846f
 #define VELOCITY 10
-#define MOUSE_SENSE 0.001f
-#define RAY_MARCH_MAX_ITERATION 15
-#define RAY_MARCH_DIST_MIN 0.05
-#define RAY_MARCH_DIST_MAX 50
+#define MOUSE_SENSE 0.0015f
+#define RAY_MARCH_MAX_ITERATION 100
+#define RAY_MARCH_DIST_MIN 0.005
+#define WORLD_MAX_OBJ_DIST 20
 #define FOV_X (90.f * PI / 180)
 
 f32 sphere_distance(Vec3 position, Vec3 center, f32 radius) {
@@ -30,25 +30,19 @@ b8 march_ray(Vec3 position, Vec3 direction) {
 	assert(is_norm(direction), "direction is not normalized");
 	f32 r = 1;
 	for (i32 i = 0; i < RAY_MARCH_MAX_ITERATION; ++i) {
-		f32 dist = 
-		min(
-			max(
-				min(
-					cube_distance(position, vec3(10, 0, 0), vec3(r, r, r)),
-					sphere_distance(position, vec3(10, 0, 0) + vec3(0, 0, 1.7f), r)
-				),
-				-cube_distance(position, vec3(10, 0, 2.4f), vec3(r*2, r*2, r*0.5f))
-			),
-			cube_distance(position, vec3(0, 0, 10), vec3(r, r, r))
-	   );
+		f32 dist = cube_distance(position, vec3(10, 0, 0), vec3(r, r, r));
+		dist     = min(dist, sphere_distance(position, vec3(10, 0, 0) + vec3(0, 0, 1.7f), r));
+		dist     = max(dist, -cube_distance(position, vec3(10, 0, 2.4f), vec3(r*2, r*2, r*0.5f)));
+		dist     = min(dist, cube_distance(position, vec3(0, 0, 10), vec3(r, r, r)));
 
+		position = position + dist*direction;
 		if (dist < RAY_MARCH_DIST_MIN) {
 			return 1;
-		} else if (dist > RAY_MARCH_DIST_MAX) {
+		} else if (length2(position) > WORLD_MAX_OBJ_DIST*WORLD_MAX_OBJ_DIST) {
 			return 0;
 		}
-		position = position + dist*direction;
 	}
+	log("I should never get here: iterations of ray marching were too few");
 	return 0;
 }
 
