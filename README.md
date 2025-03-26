@@ -6,10 +6,10 @@
 ## Compilation
 For compiling this project, you need:
 - to be on Linux
-- `g++` (or `clang++`, in this case change the Makefile)
+- `g++` (or `clang++` -> case change the Makefile)
 - `SDL3` 
-    - either download the **developer version** from your distro package repo
-    - compile it from [Source](https://github.com/libsdl-org/SDL/tree/main)
+    - either download the **developer version** from your distro package repository
+    - or compile it from [source](https://github.com/libsdl-org/SDL/tree/main)
 
 ## Input
 - `W` move forward
@@ -22,4 +22,4 @@ For compiling this project, you need:
 - `ESC` exit
 - `MOUSE-LEFT` focus/unfocus the window
 
-You can always change the [source code](src/linux/first.c) if you desire to change them.
+You can always change them in [source code](src/linux/first.cpp).
