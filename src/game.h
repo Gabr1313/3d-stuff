@@ -40,7 +40,7 @@ typedef struct {
 
 	Vec3 position;
 
-	Vec3 sphere_center;
-	f32  sphere_radius;
+	Vec3 center;
+	f32  radius;
 } GameState;
 

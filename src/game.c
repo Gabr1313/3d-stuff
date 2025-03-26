@@ -10,34 +10,40 @@
 #define PI 3.14159265358979323846f
 #define VELOCITY 10
 #define MOUSE_SENSE 0.001f
-#define RAY_MARCH_MAX_ITERATION 10
-#define RAY_MARCH_DIST 0.1
+#define RAY_MARCH_MAX_ITERATION 15
+#define RAY_MARCH_DIST_MIN 0.05
+#define RAY_MARCH_DIST_MAX 50
 #define FOV_X (90.f * PI / 180)
 
 f32 sphere_distance(Vec3 position, Vec3 center, f32 radius) {
 	return vec3_dist(position, center) - radius;
-	//
-	// a cube
-	//
-	// Vec3 value = vec3_sub(vec3_abs(vec3_sub(position, center)), (Vec3){.e = {1, 1, 1}});
-	// if(value.x<0.){
-	// 	value.x = 0.;  
-	// }
-	// if(value.y<0.){
-	// 	value.y = 0.;  
-	// }
-	// if(value.z<0.){
-	// 	value.z = 0.;  
-	// }  
-	// return vec3_length(value);
 }
 
-b8 march_ray_sphere(Vec3 position, Vec3 direction, Vec3 center, f32 radius) {
+f32 cube_distance(Vec3 position, Vec3 center, Vec3 radius) {
+	Vec3 d = vec3_sub(vec3_abs(vec3_sub(position, center)), radius);
+	f32 outside = vec3_length(vec3_clamp_min(d, 0));
+	f32 inside  = max(d.x, max(d.y, d.z));
+	return (inside > 0) ? outside : inside;
+}
+
+b8 march_ray(Vec3 position, Vec3 direction, Vec3 center, f32 radius) {
 	assert(vec3_is_norm(direction), "direction is not normalized");
 	for (i32 i = 0; i < RAY_MARCH_MAX_ITERATION; ++i) {
-		f32 dist = sphere_distance(position, center, radius);
-		if (dist < RAY_MARCH_DIST) {
+		// f32 dist = sphere_distance(position, center, radius);
+		// f32 dist = cube_distance(position, center, radius);
+		
+		f32 dist = max(
+			min(
+				cube_distance(position, center, vec3_new(radius, radius, radius)),
+				sphere_distance(position, vec3_add(center, vec3_new(0, 0, 1.7f)), radius)
+			),
+			-cube_distance(position, vec3_add(center, vec3_new(0, 0, 2.4f)), vec3_new(radius*2, radius*2, radius*0.5f))
+		);
+
+		if (dist < RAY_MARCH_DIST_MIN) {
 			return 1;
+		} else if (dist > RAY_MARCH_DIST_MAX) {
+			return 0;
 		}
 		position = vec3_add(position, vec3_sca(direction, dist));
 	}
@@ -62,15 +68,18 @@ void draw(GameState *state, Canvas *canvas) {
 		1/(f32)canvas->height);
 
 	Color background_color = {.e = {0x18, 0x18, 0x18, 0xff}};
-	Color sphere_color     = {.e = {0xf0, 0x80, 0x80, 0xff}};
 	Vec3 dir_left = camera_up_left;
 	for (u32 i = 0; i < canvas->height; ++i) {
 		Vec3 dir = dir_left;
 		u32 delta_i = i * canvas->width;
 		for (u32 j = 0; j < canvas->width; ++j) {
-			b8 stopped = march_ray_sphere(state->position, vec3_norm(dir),
-				state->sphere_center, state->sphere_radius);
-			Color color = stopped ? sphere_color : background_color;
+			b8 stopped = march_ray(state->position, vec3_norm(dir),
+				state->center, state->radius);
+			Color color = !stopped ? (Color){.e = {
+				(u8)(127*dir.x+127), 
+				(u8)(127*dir.y+127), 
+				(u8)(127*dir.z+127), 
+			0xff}} : background_color;
 			u32 idx = (delta_i + j) * 4;
 			canvas->pixels[idx + 0] = color.e[2];
 			canvas->pixels[idx + 1] = color.e[1];
@@ -85,20 +94,12 @@ void draw(GameState *state, Canvas *canvas) {
 Vec3 get_camera_left(Vec3 camera, Vec3 old_camera_left) {
 	Vec3 camera_left = old_camera_left;
 	if (fabs(camera.y) > fabs(camera.x) && fabs(camera.y) > VEC3_EPS) {
-		camera_left = vec3_norm((Vec3){
-			.x = -1, 
-			.y = (camera.x/camera.y),
-			.z = 0
-		});
+		camera_left = vec3_norm(vec3_new(-1, (camera.x/camera.y), 0));
 		if (camera.y < 0) {
 			camera_left = vec3_inv(camera_left);
 		}
 	} else if (fabs(camera.x) > VEC3_EPS) {
-		camera_left = vec3_norm((Vec3){
-			.x = (camera.y/camera.x),
-			.y = -1,
-			.z = 0
-		});
+		camera_left = vec3_norm(vec3_new((camera.y/camera.x), -1, 0));
 		if (camera.x > 0) {
 			camera_left = vec3_inv(camera_left);
 		}

@@ -59,7 +59,11 @@ void read_input(Input *input, SDL_Window* window) {
 					case SDLK_E: {
 						input->up = true;
 					} break;
-					case SDLK_F: { // focus
+				}
+			} break;
+			case SDL_EVENT_MOUSE_BUTTON_DOWN: {
+				switch (event.button.button) {
+					case SDL_BUTTON_LEFT: { // focus
 						SDL_SetWindowRelativeMouseMode(window, !SDL_GetWindowRelativeMouseMode(window));
 					} break;
 				}
@@ -184,10 +188,10 @@ i32 main(void) {
 	// present_pixels_1(&canvas.pixels, renderer, texture);
 
 	GameState *game_state = arena_push_struct_zero(&arena, GameState);
-	game_state->camera         = (Vec3){.e = {1, 0, 0}};
-	game_state->position       = (Vec3){.e = {-10, 0, 0}};
-	game_state->sphere_center  = (Vec3){.e = {0, 2, -1}};
-	game_state->sphere_radius  = 1;
+	game_state->camera         = vec3_new(  1, 0, 0);
+	game_state->position       = vec3_new(-10, 0, 0);
+	game_state->center         = vec3_new(  0, 0, 0);
+	game_state->radius  = 1;
 	Input input = { .running = true };
 
 	DLFuncs dlf    = {0};
