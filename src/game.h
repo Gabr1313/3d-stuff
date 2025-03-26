@@ -21,9 +21,11 @@ typedef struct {
 	b8 running;
 
 	b8 forward;
-	b8 left;
 	b8 backward;
+	b8 left;
 	b8 right;
+	b8 up;
+	b8 down;
 
 	f32 dmouse_x;
 	f32 dmouse_y;
@@ -33,7 +35,7 @@ typedef struct {
 	u64 time_ns;
 
 	Vec3 camera;
-	Vec3 camera_right;
+	Vec3 camera_left;
 	Vec3 camera_up;
 
 	Vec3 position;

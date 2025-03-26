@@ -1,14 +1,13 @@
 #pragma once
 
 #include <stdio.h>
-#define _err(format, ...)  fprintf(stderr, format "\n", ##__VA_ARGS__)
-#define err(...)  _err("[ERROR] " __VA_ARGS__)
+#define _log(stream, format, ...)  fprintf(stream, format "\n", ##__VA_ARGS__)
+#define err(...)  _log(stderr, "[ERROR] " __VA_ARGS__)
 
 
 #ifdef DBG
-#define _log(format, ...)  fprintf(stdout, format "\n", ##__VA_ARGS__)
-#define log(...)  _log("[INFO] " __VA_ARGS__)
-#define dbg(...)  _log("[DBG] " __VA_ARGS__)
+#define log(...)  _log(stdout, "[INFO] " __VA_ARGS__)
+#define dbg(...)  _log(stdout, "[DBG] " __VA_ARGS__)
 
 #define assert(cond, message, ...)                                  \
     do {                                                            \

@@ -15,6 +15,10 @@ Vec3 vec3_inv(Vec3 a) {
 	return (Vec3){.e = {-a.x, -a.y, -a.z}};
 }
 
+Vec3 vec3_abs(Vec3 a) {
+	return (Vec3){.e = {fabsf(a.x), fabsf(a.y), fabsf(a.z)}};
+}
+
 Vec3 vec3_add(Vec3 a, Vec3 b) {
 	return (Vec3){.e = {a.x + b.x, a.y + b.y, a.z + b.z}};
 }

@@ -37,10 +37,8 @@ void read_input(Input *input, SDL_Window* window) {
 			} break;
 			case SDL_EVENT_KEY_DOWN: {
 				switch (event.key.key) {
+					case SDLK_X:
 					case SDLK_ESCAPE: {
-						input->running = false;
-					} break;
-					case SDLK_Q: {
 						input->running = false;
 					} break;
 					case SDLK_W: {
@@ -55,6 +53,12 @@ void read_input(Input *input, SDL_Window* window) {
 					case SDLK_D: {
 						input->right = true;
 					} break;
+					case SDLK_Q: {
+						input->down = true;
+					} break;
+					case SDLK_E: {
+						input->up = true;
+					} break;
 					case SDLK_F: { // focus
 						SDL_SetWindowRelativeMouseMode(window, !SDL_GetWindowRelativeMouseMode(window));
 					} break;
@@ -62,10 +66,8 @@ void read_input(Input *input, SDL_Window* window) {
 			} break;
 			case SDL_EVENT_KEY_UP: {
 				switch (event.key.key) {
+					case SDLK_X:
 					case SDLK_ESCAPE: {
-						input->running = true;
-					} break;
-					case SDLK_Q: {
 						input->running = true;
 					} break;
 					case SDLK_W: {
@@ -80,6 +82,12 @@ void read_input(Input *input, SDL_Window* window) {
 					case SDLK_D: {
 						input->right = false;
 					} break;
+					case SDLK_Q: {
+						input->down = false;
+					} break;
+					case SDLK_E: {
+						input->up = false;
+					} break;
 				}
 			} break;
 			case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: {
@@ -90,7 +98,7 @@ void read_input(Input *input, SDL_Window* window) {
 	SDL_GetRelativeMouseState(&input->dmouse_x, &input->dmouse_y);
 }
 
-void get_texture_pixels_and_present(u8** pixels, SDL_Renderer *renderer, SDL_Texture *texture) {
+void present_pixels_1(u8** pixels, SDL_Renderer *renderer, SDL_Texture *texture) {
 	SDL_UnlockTexture(texture);
 
 	if (!SDL_RenderTexture(renderer, texture, 0, 0)) {
@@ -105,6 +113,19 @@ void get_texture_pixels_and_present(u8** pixels, SDL_Renderer *renderer, SDL_Tex
 		err("SDL could not unlock texture! SDL_Error: %s\n", SDL_GetError());
 	}
 	assert(pitch == texture->w * 4, "the pitch should be 4 times the texture width");
+}
+
+void present_pixels_2(u8* pixels, SDL_Renderer *renderer, SDL_Texture *texture) {
+	if (!SDL_UpdateTexture(texture, 0, pixels, texture->w * 4)) {
+		err("SDL could not copy pixels to the texture: %s\n", SDL_GetError());
+	}
+	if (!SDL_RenderTexture(renderer, texture, 0, 0)) {
+		err("SDL could not copy pixels from texture to renderer: %s\n", SDL_GetError());
+	}
+	if (!SDL_RenderPresent(renderer)) {
+		err("SDL could present the texture! SDL_Error: %s\n", SDL_GetError());
+	}
+	dbg("here");
 }
 
 i32 main(void) {
@@ -156,14 +177,16 @@ i32 main(void) {
 		return 1;
 	}
 
-	i32 pitch;
-	SDL_LockTexture(texture, NULL, (void**)&canvas.pixels, &pitch);
-	assert(pitch ==  texture->w * 4, "the pitch should be 4 times the texture width");
+	// TODO: decide between `present_pixels_1` and `present_pixels_2`
+	// if you choose `present_pixels_1`, than this allocation is useless,
+	//     (and uncomment the following please)
+	canvas.pixels = arena_push(&arena, 4 * canvas.width * canvas.height);
+	// present_pixels_1(&canvas.pixels, renderer, texture);
 
 	GameState *game_state = arena_push_struct_zero(&arena, GameState);
 	game_state->camera         = (Vec3){.e = {1, 0, 0}};
 	game_state->position       = (Vec3){.e = {-10, 0, 0}};
-	game_state->sphere_center  = (Vec3){.e = {0, 0, 0}};
+	game_state->sphere_center  = (Vec3){.e = {0, 2, -1}};
 	game_state->sphere_radius  = 1;
 	Input input = { .running = true };
 
@@ -190,7 +213,11 @@ i32 main(void) {
 
 		read_input(&input, window);
 		dlf.game_update(game_state, &input, &canvas);
-		get_texture_pixels_and_present(&canvas.pixels, renderer, texture);
+#if 1
+		present_pixels_1(&canvas.pixels, renderer, texture);
+#else
+		present_pixels_2(canvas.pixels, renderer, texture);
+#endif
 
 #ifdef DEV
 		res = dl_update(&dl);
