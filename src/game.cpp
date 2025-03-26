@@ -26,19 +26,21 @@ f32 cube_distance(Vec3 position, Vec3 center, Vec3 radius) {
 	return (inside > 0) ? outside : inside;
 }
 
-b8 march_ray(Vec3 position, Vec3 direction, Vec3 center, f32 radius) {
+b8 march_ray(Vec3 position, Vec3 direction) {
 	assert(is_norm(direction), "direction is not normalized");
+	f32 r = 1;
 	for (i32 i = 0; i < RAY_MARCH_MAX_ITERATION; ++i) {
-		// f32 dist = sphere_distance(position, center, radius);
-		// f32 dist = cube_distance(position, center, radius);
-		
-		f32 dist = max(
-			min(
-				cube_distance(position, center, vec3(radius, radius, radius)),
-				sphere_distance(position, center + vec3(0, 0, 1.7f), radius)
+		f32 dist = 
+		min(
+			max(
+				min(
+					cube_distance(position, vec3(10, 0, 0), vec3(r, r, r)),
+					sphere_distance(position, vec3(10, 0, 0) + vec3(0, 0, 1.7f), r)
+				),
+				-cube_distance(position, vec3(10, 0, 2.4f), vec3(r*2, r*2, r*0.5f))
 			),
-			-cube_distance(position, center + vec3(0, 0, 2.4f), vec3(radius*2, radius*2, radius*0.5f))
-		);
+			cube_distance(position, vec3(0, 0, 10), vec3(r, r, r))
+	   );
 
 		if (dist < RAY_MARCH_DIST_MIN) {
 			return 1;
@@ -71,8 +73,7 @@ void draw(GameState *state, Canvas *canvas) {
 		Vec3 dir = dir_left;
 		u32 delta_i = i * canvas->width;
 		for (u32 j = 0; j < canvas->width; ++j) {
-			b8 stopped = march_ray(state->position, norm(dir),
-				state->center, state->radius);
+			b8 stopped = march_ray(state->position, norm(dir));
 			Color color = !stopped ? (Color){.e = {
 				u8(127*dir.x+127), 
 				u8(127*dir.y+127), 
@@ -89,14 +90,15 @@ void draw(GameState *state, Canvas *canvas) {
 	}
 }
 
-Vec3 get_camera_left(Vec3 camera, Vec3 old_camera_left) {
-	Vec3 camera_left = old_camera_left;
-	if (fabs(camera.y) > fabs(camera.x) && fabs(camera.y) > VEC3_EPS) {
+b8 update_camera_left(Vec3 camera, Vec3 *camera_left_ptr) {
+	Vec3 camera_left = *camera_left_ptr;
+	Vec3 old_camera_left = old_camera_left;
+	if (fabs(camera.y) > fabs(camera.x) && fabs(camera.y) > 0) {
 		camera_left = norm(vec3(-1, (camera.x/camera.y), 0));
 		if (camera.y < 0) {
 			camera_left = -camera_left;
 		}
-	} else if (fabs(camera.x) > VEC3_EPS) {
+	} else if (fabs(camera.x) > 0) {
 		camera_left = norm(vec3((camera.y/camera.x), -1, 0));
 		if (camera.x > 0) {
 			camera_left = -camera_left;
@@ -104,13 +106,12 @@ Vec3 get_camera_left(Vec3 camera, Vec3 old_camera_left) {
 	} else {
 		log("Looking straight up or straight down");
 	}
-	//
-	// NOTE(gabri)This happens when you are watching upsidedown
-	//
-	if (camera_left*old_camera_left < 0) {
+	b8 upside_down = *camera_left_ptr * camera_left < 0;
+	if (upside_down) {
 		camera_left = -camera_left;
 	}
-	return camera_left;
+	*camera_left_ptr = camera_left;
+	return upside_down;
 }
 
 void update_camera(GameState *state, Input *input) {
@@ -120,18 +121,15 @@ void update_camera(GameState *state, Input *input) {
 
 	assert(is_norm(camera), "camera was not normalized");
 
-	camera_left = get_camera_left(camera, camera_left);
+	b8 upside_down = update_camera_left(camera, &camera_left);
 
 	assert(fabs(camera*camera_left) < VEC3_EPS, "rotation should be perpendicular to the camera");
 	camera = rot(camera, camera_left, input->dmouse_y*MOUSE_SENSE);
 
-	camera_up = camera^camera_left;
-	assert(is_norm(camera_up), "CameraUp should be normalized");
-
 	assert(fabs(camera*camera_up) < VEC3_EPS, "rotation should be perpendicular to the camera");
-	camera = rot(camera, camera_up, -input->dmouse_x*MOUSE_SENSE);
+	camera = rot(camera, vec3(0, 0, upside_down ? -1 : 1), -input->dmouse_x*MOUSE_SENSE);
 
-	camera_left = get_camera_left(camera, camera_left);
+	update_camera_left(camera, &camera_left);
 
 	camera_up = camera^camera_left;
 	assert(is_norm(camera_up), "camera should be normalized, however his length is %f", length(camera_up));

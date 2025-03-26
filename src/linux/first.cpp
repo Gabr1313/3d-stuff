@@ -188,10 +188,8 @@ i32 main(void) {
 	// present_pixels_1(&canvas.pixels, renderer, texture);
 
 	GameState *game_state = arena_push_struct_zero(&arena, GameState);
-	game_state->camera         = vec3(  1, 0, 0);
-	game_state->position       = vec3(-10, 0, 0);
-	game_state->center         = vec3(  0, 0, 0);
-	game_state->radius  = 1;
+	game_state->camera         = vec3(  1, 0, 0); // do not put this to (0, 0, 1) intially please
+	game_state->position       = vec3(  0, 0, 0);
 	Input input = {};
 	input.running = true;
 
@@ -215,6 +213,8 @@ i32 main(void) {
 		time_now = SDL_GetTicksNS();
 		game_state->time_ns = time_now - time_start;
 		input.dt = f32(time_now - time_prev_frame)*1e-9f;
+
+		// err("FPS: %f", 1/input.dt);
 
 		read_input(&input, window);
 		dlf.game_update(game_state, &input, &canvas);

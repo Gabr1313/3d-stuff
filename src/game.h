@@ -39,8 +39,5 @@ typedef struct {
 	Vec3 camera_up;
 
 	Vec3 position;
-
-	Vec3 center;
-	f32  radius;
 } GameState;
 
