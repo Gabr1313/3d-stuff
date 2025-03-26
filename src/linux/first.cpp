@@ -15,12 +15,12 @@
 #include "../types.h"
 
 
-#include "arena.c"
-#include "utils.c"
+#include "arena.cpp"
+#include "utils.cpp"
 #ifdef DEV
-#include "dll.c"
+#include "dll.cpp"
 #else
-#include "../game.c"
+#include "../game.cpp"
 #endif
 
 
@@ -151,7 +151,7 @@ i32 main(void) {
 		return 1;
 	}
 
-	Canvas canvas = {0};
+	Canvas canvas = {};
 	canvas.width  = WIDTH;
 	canvas.height = HEIGHT;
 
@@ -175,7 +175,7 @@ i32 main(void) {
 	SDL_Texture *texture = SDL_CreateTexture(renderer,
 		 SDL_PIXELFORMAT_ARGB8888,
 		 SDL_TEXTUREACCESS_STREAMING,
-		 (i32)canvas.width, (i32)canvas.height);
+		 i32(canvas.width), i32(canvas.height));
 	if (!texture) {
 		err("Couldn't create texture: %s", SDL_GetError());
 		return 1;
@@ -184,19 +184,20 @@ i32 main(void) {
 	// TODO: decide between `present_pixels_1` and `present_pixels_2`
 	// if you choose `present_pixels_1`, than this allocation is useless,
 	//     (and uncomment the following please)
-	canvas.pixels = arena_push(&arena, 4 * canvas.width * canvas.height);
+	canvas.pixels = (u8*)arena_push(&arena, 4 * canvas.width * canvas.height);
 	// present_pixels_1(&canvas.pixels, renderer, texture);
 
 	GameState *game_state = arena_push_struct_zero(&arena, GameState);
-	game_state->camera         = vec3_new(  1, 0, 0);
-	game_state->position       = vec3_new(-10, 0, 0);
-	game_state->center         = vec3_new(  0, 0, 0);
+	game_state->camera         = vec3(  1, 0, 0);
+	game_state->position       = vec3(-10, 0, 0);
+	game_state->center         = vec3(  0, 0, 0);
 	game_state->radius  = 1;
-	Input input = { .running = true };
+	Input input = {};
+	input.running = true;
 
-	DLFuncs dlf    = {0};
+	DLFuncs dlf    = {};
 #ifdef DEV
-	DLStats dl     = {0};
+	DLStats dl     = {};
 	dl.name        = DL_NAME;
 	i32 res = dl_update(&dl);
 	assert(res == 1, "Could not load dynamic library %s", dl.name);
@@ -213,7 +214,7 @@ i32 main(void) {
 		u64 time_prev_frame = time_now;
 		time_now = SDL_GetTicksNS();
 		game_state->time_ns = time_now - time_start;
-		input.dt = (f32)(time_now - time_prev_frame)*1e-9f;
+		input.dt = f32(time_now - time_prev_frame)*1e-9f;
 
 		read_input(&input, window);
 		dlf.game_update(game_state, &input, &canvas);
@@ -234,12 +235,12 @@ i32 main(void) {
 #endif
 		u64 tmp_time = SDL_GetTicksNS(); 
 		if (fps > 0) {
-			frame_end_ns += (u64)1e9 / fps;
+			frame_end_ns += u64(1e9) / fps;
 			if (frame_end_ns > tmp_time) {
-				// dbg("Extra time: %fms", ((f64)frame_end_ns - (f64)tmp_time)*1e-6);
+				// dbg("Extra time: %fms", f32(frame_end_ns - tmp_time)*1e-6f);
 				SDL_DelayNS(frame_end_ns - tmp_time);
 			} else {
-				log("Time not met: %fms", ((f64)tmp_time - (f64)frame_end_ns)*1e-6);
+				log("Time not met: %fms", f32(tmp_time - frame_end_ns)*1e-6f);
 				frame_end_ns = tmp_time; 
 			}
 		} 

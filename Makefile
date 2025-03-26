@@ -1,6 +1,7 @@
+CC = g++ -Wno-write-strings
 W_FLAGS = -Wall -Wextra -Wconversion -Wshadow -Wstrict-overflow -Wfloat-equal \
 	-Wformat=2 -Wstrict-aliasing -Wcast-align \
-	-Wstrict-prototypes -Wpointer-arith -Wundef -Wnull-dereference
+	-Wpointer-arith -Wundef -Wnull-dereference
 MILD_W_FLAGS = $(W_FLAGS) -Wno-unused-variable -Wno-unused-parameter
 EXTRA_W_FLAGS = $(W_FLAGS) -fanalyzer -Wno-analyzer-null-dereference
 DEBUG_FLAGS = -DDBG -ggdb -fsanitize=address,undefined
@@ -8,31 +9,31 @@ SDL_FLAGS = -lSDL3
 LINK_FLAGS = -lm
 
 release: build
-	gcc -o build/release src/linux/first.c \
+	$(CC) -o build/release src/linux/first.cpp \
 		-O3 -march=native \
 		$(SDL_FLAGS) $(LINK_FLAGS)
 
 fast: build
-	gcc -o build/game.so src/game.c \
+	$(CC) -o build/game.so src/game.cpp \
 		-O3 -march=native -DDEV -shared -fpic \
 		$(LINK_FLAGS)
-	gcc -o build/fast src/linux/first.c \
+	$(CC) -o build/fast src/linux/first.cpp \
 		-O3 -march=native -DDEV \
 		$(SDL_FLAGS) $(LINK_FLAGS)
 
 debug: build 
-	gcc -o build/game.so src/game.c \
+	$(CC) -o build/game.so src/game.cpp \
 		-O0 -DDEV -shared -fpic \
 		$(DEBUG_FLAGS) \
 		$(MILD_W_FLAGS)
-	gcc -o build/debug src/linux/first.c \
+	$(CC) -o build/debug src/linux/first.cpp \
 		-O0 -DDEV \
 		$(DEBUG_FLAGS) \
 		$(MILD_W_FLAGS) \
 		$(SDL_FLAGS) $(LINK_FLAGS)
 
 analyzer: build 
-	gcc -o build/debug src/linux/first.c \
+	$(CC) -o build/debug src/linux/first.cpp \
 		-O0 -DDEV \
 		$(DEBUG_FLAGS) \
 		$(EXTRA_W_FLAGS) \

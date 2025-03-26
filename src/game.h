@@ -2,12 +2,12 @@
 
 #include <math.h>
 
-#include "linux/utils.c"
-#include "linux/arena.c"
+#include "linux/utils.cpp"
+#include "linux/arena.cpp"
 
 #include "types.h"
 
-#include "vec.c"
+#include "vec.cpp"
 
 typedef struct {
 	u8* pixels;

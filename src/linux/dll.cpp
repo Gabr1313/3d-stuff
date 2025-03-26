@@ -9,14 +9,14 @@ typedef struct {
 	time_t    last_update;
 } DLStats;
 
-void func_stub(void) {}
+void func_stub() {}
 
-#define dl_load_func(dl, fn_name_dl, fn) _dl_load_func(dl, fn_name_dl, (void(**)(void))fn)
+#define dl_load_func(dl, fn_name_dl, fn) _dl_load_func(dl, fn_name_dl, (void(**)())fn)
 
-b8 _dl_load_func(DLStats *dl, char* fn_name_dl, void(**fn)(void)) {
-    *fn = dlsym(dl->ptr, fn_name_dl);
+b8 _dl_load_func(DLStats *dl, char* fn_name_dl, void(**fn)()) {
+    *fn = (void(*)())dlsym(dl->ptr, fn_name_dl);
     if (!*fn) {
-		*fn = (void(*)(void))func_stub;
+		*fn = (void(*)())func_stub;
         err("Error finding symbol: %s\n", dlerror());
         return false;
     }
