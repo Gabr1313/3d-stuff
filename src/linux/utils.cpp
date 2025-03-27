@@ -28,8 +28,8 @@
 
 #endif
 
-#define max(a, b) (a) > (b) ? (a) : (b)
-#define min(a, b) (a) < (b) ? (a) : (b)
+#define max(a, b) ((a) > (b) ? (a) : (b))
+#define min(a, b) ((a) < (b) ? (a) : (b))
 
 static inline f32 clamp(f32 a, f32 mn, f32 mx) {
 	return max(min(a,mx), mn);

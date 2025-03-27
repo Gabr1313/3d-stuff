@@ -66,11 +66,11 @@ static inline f32 length(Quat a) {
 	return sqrtf(length2(a));
 }
 
-static inline Quat norm(Quat a) {
+static inline Quat normalize(Quat a) {
 	return a/length(a);
 }
 
-static inline b8 is_norm(Quat a) {
+static inline b8 is_normalized(Quat a) {
 	return fabs(length2(a)) < 1 + QUAT_EPS && fabs(length2(a)) > 1 - QUAT_EPS;
 }
 
@@ -79,12 +79,12 @@ static inline Vec3 vec3(Quat a) {
 }
 
 static inline Vec3 rotate(Quat a, Quat axis) {
-	assert(is_norm(axis), "the rotation axis should be normalized, however its lenght is %f", length(axis));
+	assert(is_normalized(axis), "the rotation axis should be normalized, however its lenght is %f", length(axis));
 	return vec3(axis*a*~axis);
 }
 
 static inline Vec3 rotate(Vec3 a, Vec3 axis, f32 alpha) {
-	assert(is_norm(axis), "the rotation axis should be normalized, however its lenght is %f", length(axis));
+	assert(is_normalized(axis), "the rotation axis should be normalized, however its lenght is %f", length(axis));
 
 	f32 cosine = cosf(alpha/2);
 	f32 sine   = sinf(alpha/2);

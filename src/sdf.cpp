@@ -41,7 +41,14 @@ static inline f32 sdf_cylinder(Vec3 p, f32 r) {
 
 static inline f32 sdf_box(Vec3 p, Vec3 r) {
 	Vec3 d = abs(p) - r;
-	f32 outside = length(clamp_min(d, 0));
+	f32 outside = length(clamp_max(d, 0));
 	f32 inside  = max(d.x, max(d.y, d.z));
-	return (inside > 0) ? outside : inside;
+	return outside + min(inside, 0);
+}
+
+static inline f32 sdf_box_round(Vec3 p, Vec3 r, f32 b) {
+	Vec3 d = abs(p) - r + vec3(b);
+	f32 outside = length(clamp_max(d, 0));
+	f32 inside  = max(d.x, max(d.y, d.z));
+	return outside + min(inside, 0) - b;
 }

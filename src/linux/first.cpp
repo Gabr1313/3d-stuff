@@ -1,4 +1,3 @@
-#define FPS 30
 #define TITLE "Gabri's World"
 #define WIDTH  960
 #define HEIGHT 540
@@ -161,7 +160,7 @@ i32 main(void) {
 	SDL_Window *window = NULL;
 	SDL_Renderer *renderer = NULL;
 	u64 window_flags = SDL_WINDOW_RESIZABLE;
-#if DEV
+#ifdef DEV
 	window_flags |= SDL_WINDOW_ALWAYS_ON_TOP;
 #endif
 	if (!SDL_CreateWindowAndRenderer(TITLE, (i32)canvas.width, (i32)canvas.height, window_flags, &window, &renderer)) {
@@ -169,7 +168,7 @@ i32 main(void) {
 		return 1;
 	}
 
-#if DEV
+#ifdef DEV
 	if (!SDL_SetWindowPosition(window, WINDOW_INITIAL_POS_X, WINDOW_INITIAL_POS_Y)) {
 		log("Window can't be repositioned: %s", SDL_GetError());
 	}
@@ -208,7 +207,11 @@ i32 main(void) {
 #else
 	dlf.game_update = game_update;
 #endif
-	u64 fps              = FPS;
+#ifdef FPS
+	u64 fps = FPS;
+#else
+	u64 fps = 0;
+#endif
 	u64 time_start       = SDL_GetTicksNS();
 	u64 time_now         = time_start;
 	u64 frame_end_ns     = time_start;
@@ -218,7 +221,7 @@ i32 main(void) {
 		game_state->time_ns = time_now - time_start;
 		input.dt = f32(time_now - time_prev_frame)*1e-9f;
 
-		// log("FPS: %f", 1/input.dt);
+		log("FPS: %f", 1/input.dt);
 
 		read_input(&input, window);
 		dlf.game_update(game_state, &input, &canvas);
