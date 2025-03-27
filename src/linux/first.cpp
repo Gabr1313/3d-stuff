@@ -1,4 +1,3 @@
-// TODO: make fps this an easy choice
 #define FPS 30
 #define TITLE "Gabri's World"
 #define WIDTH  960
@@ -13,7 +12,6 @@
 
 #include "../game.h"
 #include "../types.h"
-
 
 #include "arena.cpp"
 #include "utils.cpp"
@@ -30,6 +28,7 @@ typedef struct {
 
 void read_input(Input *input, SDL_Window* window) {
 	SDL_Event event;
+	f32 dmouse_wheel = 0;
 	while (SDL_PollEvent(&event) != 0) {
 		switch (event.type) {
 			case SDL_EVENT_QUIT: {
@@ -61,13 +60,6 @@ void read_input(Input *input, SDL_Window* window) {
 					} break;
 				}
 			} break;
-			case SDL_EVENT_MOUSE_BUTTON_DOWN: {
-				switch (event.button.button) {
-					case SDL_BUTTON_LEFT: { // focus
-						SDL_SetWindowRelativeMouseMode(window, !SDL_GetWindowRelativeMouseMode(window));
-					} break;
-				}
-			} break;
 			case SDL_EVENT_KEY_UP: {
 				switch (event.key.key) {
 					case SDLK_X:
@@ -94,11 +86,22 @@ void read_input(Input *input, SDL_Window* window) {
 					} break;
 				}
 			} break;
+			case SDL_EVENT_MOUSE_BUTTON_DOWN: {
+				switch (event.button.button) {
+					case SDL_BUTTON_LEFT: { // focus
+						SDL_SetWindowRelativeMouseMode(window, !SDL_GetWindowRelativeMouseMode(window));
+					} break;
+				}
+			} break;
+			case SDL_EVENT_MOUSE_WHEEL: {
+				dmouse_wheel += event.button.x;
+			} break;
 			case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: {
 				// TODO: resize the game
 			} break;
 		}
 	}
+	input->dmouse_wheel = dmouse_wheel;
 	SDL_GetRelativeMouseState(&input->dmouse_x, &input->dmouse_y);
 }
 
@@ -182,14 +185,15 @@ i32 main(void) {
 	}
 
 	// TODO: decide between `present_pixels_1` and `present_pixels_2`
-	// if you choose `present_pixels_1`, than this allocation is useless,
+	// if you choose `present_pixels_1`, then this allocation is useless,
 	//     (and uncomment the following please)
 	canvas.pixels = (u8*)arena_push(&arena, 4 * canvas.width * canvas.height);
 	// present_pixels_1(&canvas.pixels, renderer, texture);
 
 	GameState *game_state = arena_push_struct_zero(&arena, GameState);
-	game_state->camera         = vec3(  1, 0, 0); // do not put this to (0, 0, 1) intially please
-	game_state->position       = vec3(  0, 0, 0);
+	game_state->vertical     = vec3(  0, 0, 1);
+	game_state->camera       = vec3(  1, 0, 0); // do not put this equals to game_state->direction_up please
+	game_state->position     = vec3(  0, 0, 0);
 	Input input = {};
 	input.running = true;
 
@@ -214,7 +218,7 @@ i32 main(void) {
 		game_state->time_ns = time_now - time_start;
 		input.dt = f32(time_now - time_prev_frame)*1e-9f;
 
-		err("FPS: %f", 1/input.dt);
+		// log("FPS: %f", 1/input.dt);
 
 		read_input(&input, window);
 		dlf.game_update(game_state, &input, &canvas);
@@ -240,18 +244,18 @@ i32 main(void) {
 				// dbg("Extra time: %fms", f32(frame_end_ns - tmp_time)*1e-6f);
 				SDL_DelayNS(frame_end_ns - tmp_time);
 			} else {
-				log("Time not met: %fms", f32(tmp_time - frame_end_ns)*1e-6f);
+				dbg("Time not met: %fms", f32(tmp_time - frame_end_ns)*1e-6f);
 				frame_end_ns = tmp_time; 
 			}
 		} 
 	}
 
-	// NOTE(gabri): The OS can take care of them for me
-	// SDL_DestroyRenderer(renderer);
-	// SDL_DestroyWindow(window);
-	// SDL_DestroyTexture(texture);
-	// SDL_Quit();
-	// arena_release(&arena);
+	// NOTE(gabri): The OS could take care of them for me
+	arena_release(&arena);
+	SDL_DestroyRenderer(renderer);
+	SDL_DestroyWindow(window);
+	SDL_DestroyTexture(texture);
+	SDL_Quit();
 
 	log("Game closed");
 	return 0;

@@ -21,5 +21,6 @@ For compiling this project, you need:
 - `X` exit
 - `ESC` exit
 - `MOUSE-LEFT` focus/unfocus the window
+- `MOUSE-WHEEL` roll camera
 
 You can always change them in [source code](src/linux/first.cpp).

@@ -27,6 +27,7 @@ typedef struct {
 	b8 up;
 	b8 down;
 
+	f32 dmouse_wheel;
 	f32 dmouse_x;
 	f32 dmouse_y;
 } Input;
@@ -37,6 +38,7 @@ typedef struct {
 	Vec3 camera;
 	Vec3 camera_left;
 	Vec3 camera_up;
+	Vec3 vertical;
 
 	Vec3 position;
 } GameState;

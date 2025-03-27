@@ -6,11 +6,11 @@
 
 #define _log(stream, format, ...)  fprintf(stream, format "\n", ##__VA_ARGS__)
 #define err(...)  _log(stderr, "[ERROR] " __VA_ARGS__)
+#define log(...)  _log(stdout, "[INFO] " __VA_ARGS__)
 
 
 #ifdef DBG
-#define log(...)  _log(stdout, "[INFO] " __VA_ARGS__)
-#define dbg(...)  _log(stdout, "[DBG] " __VA_ARGS__)
+#define dbg(...)  _log(stdout, "[DEBUG] " __VA_ARGS__)
 
 #define assert(cond, message, ...)                                  \
     do {                                                            \
@@ -25,10 +25,16 @@
 
 #define assert(...) do {} while(0)
 #define dbg(...)    do {} while(0)
-#define log(...)    do {} while(0)
 
 #endif
 
 #define max(a, b) (a) > (b) ? (a) : (b)
 #define min(a, b) (a) < (b) ? (a) : (b)
 
+static inline f32 clamp(f32 a, f32 mn, f32 mx) {
+	return max(min(a,mx), mn);
+}
+
+static inline f32 mix(f32 a, f32 b, f32 k) {
+	return k*a + (1.0f-k)*b;
+}

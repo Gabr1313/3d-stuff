@@ -78,18 +78,17 @@ static inline Vec3 vec3(Quat a) {
 	return vec3(a.i, a.j, a.k);
 }
 
-static inline Vec3 rot(Quat a, Quat axis) {
-	assert(is_norm(axis), "the rotation axis should be normalized");
+static inline Vec3 rotate(Quat a, Quat axis) {
 	assert(is_norm(axis), "the rotation axis should be normalized, however its lenght is %f", length(axis));
 	return vec3(axis*a*~axis);
 }
 
-static inline Vec3 rot(Vec3 a, Vec3 axis, f32 alpha) {
+static inline Vec3 rotate(Vec3 a, Vec3 axis, f32 alpha) {
 	assert(is_norm(axis), "the rotation axis should be normalized, however its lenght is %f", length(axis));
 
 	f32 cosine = cosf(alpha/2);
 	f32 sine   = sinf(alpha/2);
 	Quat mid = quat(0, a.x, a.y, a.z);
 	Quat axis_q = quat(cosine, sine*axis);
-	return rot(mid, axis_q);
+	return rotate(mid, axis_q);
 }

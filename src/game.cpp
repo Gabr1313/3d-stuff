@@ -6,66 +6,37 @@
 #include "color.cpp"
 #include "vec.cpp"
 #include "quat.cpp"
+#include "sdf.cpp"
 
 #define PI 3.14159265358979323846f
 #define VELOCITY 10
 #define MOUSE_SENSE 0.0015f
+#define SCROLL_WHEEL_SENSE 0.05f
 #define RAY_MARCH_MAX_ITERATION 100
 #define RAY_MARCH_DIST_MIN 0.005
 #define WORLD_MAX_OBJ_DIST 20
 #define FOV_X (90.f * PI / 180)
 
-static inline f32 op_union(f32 d1, f32 d2) {
-	return min(d1,d2); 
-}
-
-static inline f32 op_subtract(f32 d1, f32 d2) { 
-	return max(d1,-d2); 
-}
-
-static inline f32 op_intersect(f32 d1, f32 d2) { 
-	return max(d1,d2); 
-}
-
-
-static inline f32 clamp(f32 a, f32 mn, f32 mx) {
-	return max(min(a, mx), mn);
-}
-
-static inline f32 op_smooth(f32 d1, f32 d2, f32 k) {
-    f32 h = clamp(0.5f + 0.5f*(d2-d1)/k, 0.0f, 1.0f);
-    return h*d1 + (1.0f-h)*d2 - k*h*(1.0f-h);
-}
-
-f32 sphere_distance(Vec3 position, Vec3 center, f32 radius) {
-	return length(position - center) - radius;
-}
-
-f32 cylinder1_distance(Vec3 p, Vec3 c, f32 r) {
-	Vec3 v = p-c;
-	return sqrtf(v.y*v.y + v.z*v.z) - r;
-}
-
-f32 cylinder2_distance(Vec3 p, Vec3 c, f32 r) {
-	Vec3 v = p-c;
-	return sqrtf(v.x*v.x + v.z*v.z) - r;
-}
-
-f32 cube_distance(Vec3 position, Vec3 center, Vec3 radius) {
-	Vec3 d = abs(position - center) - radius;
-	f32 outside = length(clamp_min(d, 0));
-	f32 inside  = max(d.x, max(d.y, d.z));
-	return (inside > 0) ? outside : inside;
-}
-
 b8 march_ray(Vec3 position, Vec3 direction, f32 time) {
 	assert(is_norm(direction), "direction is not normalized");
-	f32 r = 1;
 	for (i32 i = 0; i < RAY_MARCH_MAX_ITERATION; ++i) {
-		f32 dist = cube_distance(position, vec3(10, 0, 0), vec3(r, r, r));
-		dist     = op_subtract(dist, cylinder1_distance(position, vec3(0, 0, 0), 0.8f));
-		dist     = op_subtract(dist, cylinder2_distance(position, vec3(10, 0, 0), 0.8f));
-		dist     = op_smooth(dist, sphere_distance(position, vec3(10, 0, 1.0f + sinf(time)), r/3), 0.3f);
+		f32 dist = sdf_box(rotate(position - vec3(10, 0, 0), vec3(0,0,1), time/4), vec3(1, 1, .2f));
+
+#if 1
+		dist     = sdf_union(dist, sdf_sphere(position - vec3(10, 0, 2), 0.8f));
+		dist     = sdf_union(dist, sdf_sphere(position - vec3(-10, 0, 0), 0.8f));
+#else
+		dist     = sdf_sub(dist, sdf_cylinder(position - vec3(10, 0, 0), 0.8f));
+
+		f32 dist2 = sdf_cylinder(position - vec3(10, 0, 0), 0.2f);
+		dist2     = sdf_inter(dist2, sdf_box(position - vec3(10, 0, 0), vec3(1, 1, 2)));
+		dist      = sdf_union(dist, dist2);
+
+		dist2     = sdf_sphere(position - vec3(10 + 4*cosf(time), 0, 0), 0.2f);
+		dist2     = sdf_union_smooth(dist2, sdf_sphere(position - vec3(10, 4*sinf(time), 0), 0.2f), 1.0f);
+		dist2     = sdf_union_smooth(dist2, sdf_sphere(position - vec3(10 + 4*cosf(time), 4*sinf(time), 0), 0.2f), 1.0f);
+		dist      = sdf_union_smooth(dist, dist2, 2.0f);
+#endif
 
 		position = position + dist*direction;
 		if (dist < RAY_MARCH_DIST_MIN) {
@@ -74,7 +45,7 @@ b8 march_ray(Vec3 position, Vec3 direction, f32 time) {
 			return 0;
 		}
 	}
-	log("I should never get here: iterations of ray marching were too few");
+	dbg("I should never get here: iterations of ray marching were too few");
 	return 0;
 }
 
@@ -84,16 +55,16 @@ void draw(GameState *state, Canvas *canvas) {
 	f32 alpha_y = alpha_x * f32(canvas->height) / f32(canvas->width);
 	assert(is_norm(state->camera_left), "direction is not normalized");
 	assert(is_norm(state->camera_up)   , "direction is not normalized");
-	Vec3 camera_up_left    = rot(state->camera,     state->camera_up,     alpha_x/2);
-	     camera_up_left    = rot(camera_up_left,    state->camera_left,  -alpha_y/2);
-	Vec3 camera_up_right   = rot(state->camera,     state->camera_up,    -alpha_x/2);
-	     camera_up_right   = rot(camera_up_right,   state->camera_left,  -alpha_y/2);
-	Vec3 camera_down_left  = rot(state->camera,     state->camera_up,     alpha_x/2);
-	     camera_down_left  = rot(camera_down_left,  state->camera_left,   alpha_y/2);
+	Vec3 camera_up_left    = rotate(state->camera,     state->camera_up,     alpha_x/2);
+	     camera_up_left    = rotate(camera_up_left,    state->camera_left,  -alpha_y/2);
+	Vec3 camera_up_right   = rotate(state->camera,     state->camera_up,    -alpha_x/2);
+	     camera_up_right   = rotate(camera_up_right,   state->camera_left,  -alpha_y/2);
+	Vec3 camera_down_left  = rotate(state->camera,     state->camera_up,     alpha_x/2);
+	     camera_down_left  = rotate(camera_down_left,  state->camera_left,   alpha_y/2);
 	Vec3 delta_x = (camera_up_right - camera_up_left) / f32(canvas->width);
 	Vec3 delta_y = (camera_down_left - camera_up_left) / f32(canvas->height);
 
-	Color background_color = {.e = {0x18, 0x18, 0x18, 0xff}};
+	Color black = {.e = {0x18, 0x18, 0x18, 0xff}};
 	Vec3 dir_left = camera_up_left;
 	for (u32 i = 0; i < canvas->height; ++i) {
 		Vec3 dir = dir_left;
@@ -104,7 +75,7 @@ void draw(GameState *state, Canvas *canvas) {
 				u8(127*dir.x+127), 
 				u8(127*dir.y+127), 
 				u8(127*dir.z+127), 
-			0xff}} : background_color;
+			0xff}} : black;
 			u32 idx = (delta_i + j) * 4;
 			canvas->pixels[idx + 0] = color.e[2];
 			canvas->pixels[idx + 1] = color.e[1];
@@ -116,21 +87,13 @@ void draw(GameState *state, Canvas *canvas) {
 	}
 }
 
-b8 update_camera_left(Vec3 camera, Vec3 *camera_left_ptr) {
-	Vec3 camera_left = *camera_left_ptr;
-	if (fabs(camera.y) > fabs(camera.x) && fabs(camera.y) > 0) {
-		camera_left = norm(vec3(-1, (camera.x/camera.y), 0));
-		if (camera.y < 0) {
-			camera_left = -camera_left;
-		}
-	} else if (fabs(camera.x) > 0) {
-		camera_left = norm(vec3((camera.y/camera.x), -1, 0));
-		if (camera.x > 0) {
-			camera_left = -camera_left;
-		}
-	} else {
-		log("Looking straight up or straight down");
-	}
+static inline b8 update_camera_left(Vec3 *camera_left_ptr, Vec3 camera, Vec3 vertical) {
+	Vec3 camera_left = vertical^camera;
+	if (is_zero(camera_left)) {
+		return false;
+	} 	
+	camera_left = norm(camera_left);
+	// NOTE(gabri): just remove the following if you don't enjoy rolling the camera
 	b8 upside_down = *camera_left_ptr * camera_left < 0;
 	if (upside_down) {
 		camera_left = -camera_left;
@@ -143,21 +106,20 @@ void update_camera(GameState *state, Input *input) {
 	Vec3 camera        = state->camera;
 	Vec3 camera_up     = state->camera_up;
 	Vec3 camera_left   = state->camera_left;
+	Vec3 vertical      = state->vertical;
 
 	assert(is_norm(camera), "camera was not normalized");
+	vertical = rotate(vertical, camera, input->dmouse_wheel*SCROLL_WHEEL_SENSE);
 
-	b8 upside_down = update_camera_left(camera, &camera_left);
+	b8 upside_down = update_camera_left(&camera_left, camera, vertical);
 
-	assert(fabs(camera*camera_left) < VEC3_EPS, "rotation should be perpendicular to the camera");
-	camera = rot(camera, camera_left, input->dmouse_y*MOUSE_SENSE);
+	camera = rotate(camera, camera_left, input->dmouse_y*MOUSE_SENSE);
+	camera = rotate(camera, state->vertical * (upside_down ? -1 : 1), -input->dmouse_x*MOUSE_SENSE);
 
-	assert(fabs(camera*camera_up) < VEC3_EPS, "rotation should be perpendicular to the camera");
-	camera = rot(camera, vec3(0, 0, upside_down ? -1 : 1), -input->dmouse_x*MOUSE_SENSE);
-
-	update_camera_left(camera, &camera_left);
+	update_camera_left(&camera_left, camera, vertical);
 
 	camera_up = camera^camera_left;
-	assert(is_norm(camera_up), "camera should be normalized, however his length is %f", length(camera_up));
+	assert(is_norm(camera_up), "camera_up should be normalized, however his length is %f", length(camera_up));
 
 	assert(is_norm(camera), "camera should be normalized, however his length is %f", length(camera));
 	camera = norm(camera); // otherwise error propagates too much
@@ -165,6 +127,7 @@ void update_camera(GameState *state, Input *input) {
 	state->camera        = camera;
 	state->camera_up     = camera_up;
 	state->camera_left   = camera_left;
+	state->vertical      = vertical;
 }
 
 void update_position(GameState *state, Input *input) {
