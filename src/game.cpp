@@ -17,7 +17,7 @@
 #define RAY_MARCH_MAX_ITERATION 100
 #define RAY_MARCH_DIST_MIN 0.005
 #define WORLD_MAX_OBJ_DIST 20
-#define GRADIENT_EPS 1e-3f;
+#define GRADIENT_EPS 1e-4f;
 
 #define PI 3.14159265358979323846f
 
@@ -26,7 +26,6 @@ static inline f32 sdf_scene(Vec3 position, f32 time) {
 	f32 dist = sdf_sphere(position - vec3(10, 0, 0), 1);
 #else
 	f32 dist = sdf_box_round(rotate(position - vec3(10, 0, 0), vec3(0,0,1), time/4), vec3(1, 1, .2f), 0.2f);
-	// f32 dist = sdf_box(position - vec3(10, 0, 0), vec3(1, 1, .2f));
 #if 0
 	dist     = sdf_union(dist, sdf_sphere(position - vec3(10, 0, 2), 0.8f));
 	dist     = sdf_union(dist, sdf_sphere(position - vec3(-10, 0, 0), 0.8f));
@@ -55,6 +54,7 @@ static inline Vec3 scene_normal(Vec3 position, f32 time) {
 	));
 }
 
+// TODO: I don't like this return value
 // returns the contanct point. if (0, 0, 0) then nothing is found
 static inline Vec3 scene_march_ray(Vec3 position, Vec3 direction, f32 time) {
 	assert(is_normalized(direction), "direction is not normalized");
@@ -86,6 +86,9 @@ void draw(GameState *state, Canvas *canvas) {
 	Vec3 delta_y = (camera_down_left - camera_up_left) / f32(canvas->height);
 
 	Vec3 dir_left = camera_up_left;
+	Vec3 light_1 = vec3(0, -5, 10);
+	Vec3 light_2 = vec3(0, 10, 10);
+	Vec3 light_3 = vec3(20, 0, -5);
 	f32 time = f32(state->time_ns)*1e-9f;
 	for (u32 i = 0; i < canvas->height; ++i) {
 		Vec3 dir = dir_left;
@@ -95,10 +98,25 @@ void draw(GameState *state, Canvas *canvas) {
 			Vec3 pos = scene_march_ray(state->position, n_dir, time);
 			Color col;
 			if (is_zero(pos)) {
-				col = color(0x18, 0x18, 0x18, 0xff);
-				// col = color(127.5f*n_dir + vec3(127.5f), 0xff);
+				// col = color(0x18, 0x18, 0x18, 0xff);
+				// col = color(0.5*n_dir + vec3(0.5), 0xff);
+				col = color(0x69a8f5, 0xff);
 			} else {
-				col = color(127.5f*scene_normal(pos, time) + vec3(127.5f), 0xff);
+				// col = color(0.5f*scene_normal(pos, time) + vec3(0.5), 0xff);
+
+				f32 total_light = 0;
+				f32 light;
+
+				light = max(0, scene_normal(pos, time) * normalize(light_1-pos));
+				total_light += 0.6f * light;
+
+				light = max(0, scene_normal(pos, time) * normalize(light_2-pos));
+				total_light += 0.6f * light;
+				
+				light = max(0, scene_normal(pos, time) * normalize(light_3-pos));
+				total_light += 0.3f * light;
+
+				col = color(total_light*vec3(1.0f, 0.85f, 0.7f), 0xff);
 			}
 			u32 idx = (delta_i + j) * 4;
 			canvas->pixels[idx + 0] = col.b;
@@ -118,7 +136,7 @@ static inline Vec3 update_camera_left(Vec3 old_camera_left, Vec3 camera, Vec3 ve
 	} 	
 	camera_left = normalize(camera_left);
 	// NOTE(gabri): just remove the following lines if you don't enjoy rotating the camera over the vertical
-	b8 upside_down = old_camera_left * camera_left < 0;
+	b1 upside_down = old_camera_left * camera_left < 0;
 	return upside_down ? -camera_left : camera_left;
 }
 

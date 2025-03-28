@@ -18,14 +18,15 @@ typedef struct {
 typedef struct {
 	f32 dt;
 
-	b8 running;
+	b1 running;
+	b1 pause;
 
-	b8 forward;
-	b8 backward;
-	b8 left;
-	b8 right;
-	b8 up;
-	b8 down;
+	b1 forward;
+	b1 backward;
+	b1 left;
+	b1 right;
+	b1 up;
+	b1 down;
 
 	f32 dmouse_wheel;
 	f32 dmouse_x;

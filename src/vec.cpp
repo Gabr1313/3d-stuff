@@ -90,10 +90,10 @@ static inline Vec3 normalize(Vec3 a) {
 	return a/length(a);
 }
 
-static inline b8 is_normalized(Vec3 a) {
+static inline b1 is_normalized(Vec3 a) {
 	return fabs(length2(a)) < 1 + VEC3_EPS && fabs(length2(a)) > 1 - VEC3_EPS;
 }
 
-static inline b8 is_zero(Vec3 a) {
+static inline b1 is_zero(Vec3 a) {
 	return fabsf(a.x) + fabsf(a.y) + fabsf(a.z) <= 0;
 }

@@ -11,7 +11,7 @@ typedef struct {
 
 void func_stub() {}
 
-#define dl_load_func(dl, fn_name_dl, fn) _dl_load_func(dl, fn_name_dl, (void(**)())fn)
+#define dl_load_func(dl, fn_name_dl, fn) _dl_load_func(dl, fn_name_dl, (void(**)(void))fn)
 
 b8 _dl_load_func(DLStats *dl, char* fn_name_dl, void(**fn)()) {
     *fn = (void(*)())dlsym(dl->ptr, fn_name_dl);

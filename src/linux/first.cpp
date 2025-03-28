@@ -1,3 +1,5 @@
+#define SHOW_FPS 0
+#define FPS_PAUSE 30
 #define TITLE "Gabri's World"
 #define WIDTH  960
 #define HEIGHT 540
@@ -38,6 +40,9 @@ void read_input(Input *input, SDL_Window* window) {
 					case SDLK_X:
 					case SDLK_ESCAPE: {
 						input->running = false;
+					} break;
+					case SDLK_P: {
+						input->pause ^= 1;
 					} break;
 					case SDLK_W: {
 						input->forward = true;
@@ -221,15 +226,11 @@ i32 main(void) {
 		game_state->time_ns = time_now - time_start;
 		input.dt = f32(time_now - time_prev_frame)*1e-9f;
 
+#if SHOW_FPS
 		log("FPS: %f", 1/input.dt);
+#endif
 
 		read_input(&input, window);
-		dlf.game_update(game_state, &input, &canvas);
-#if 1
-		present_pixels_1(&canvas.pixels, renderer, texture);
-#else
-		present_pixels_2(canvas.pixels, renderer, texture);
-#endif
 
 #ifdef DEV
 		res = dl_update(&dl);
@@ -238,12 +239,25 @@ i32 main(void) {
 			log("Dynamic Library reloaded: %s", dl.name);
 			res = dl_load_func(&dl, "game_update", &dlf.game_update);
 			assert(res, "Could not load dynamic library function %s", dl.name);
+			if (input.pause) {
+				dlf.game_update(game_state, &input, &canvas);
+			}
 		}
 #endif
+
+		if (!input.pause) {
+			dlf.game_update(game_state, &input, &canvas);
+		}
+#if 1
+		present_pixels_1(&canvas.pixels, renderer, texture);
+#else
+		present_pixels_2(canvas.pixels, renderer, texture);
+#endif
 		u64 tmp_time = SDL_GetTicksNS(); 
-		if (fps > 0) {
-			frame_end_ns += u64(1e9) / fps;
+		if (fps > 0 || input.pause) {
+			frame_end_ns += u64(1e9) / (fps > 0 ? fps : FPS_PAUSE);
 			if (frame_end_ns > tmp_time) {
+				// dbg("Extra time: %fms", f32(frame_end_ns - tmp_time)*1e-6f);
 				// dbg("Extra time: %fms", f32(frame_end_ns - tmp_time)*1e-6f);
 				SDL_DelayNS(frame_end_ns - tmp_time);
 			} else {

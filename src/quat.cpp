@@ -70,7 +70,7 @@ static inline Quat normalize(Quat a) {
 	return a/length(a);
 }
 
-static inline b8 is_normalized(Quat a) {
+static inline b1 is_normalized(Quat a) {
 	return fabs(length2(a)) < 1 + QUAT_EPS && fabs(length2(a)) > 1 - QUAT_EPS;
 }
 
