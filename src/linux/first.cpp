@@ -6,7 +6,7 @@
 #define WINDOW_INITIAL_POS_X 0
 #define WINDOW_INITIAL_POS_Y 0
 
-#define DL_NAME "build/game.so"
+#define DL_NAME      "build/game.so"
 
 #include <SDL3/SDL.h>
 #include <errno.h>
@@ -205,6 +205,7 @@ i32 main(void) {
 #ifdef DEV
 	DLStats dl     = {};
 	dl.name        = DL_NAME;
+	dl.lock_file   = DL_LOCK_FILE;
 	i32 res = dl_update(&dl);
 	assert(res == 1, "Could not load dynamic library %s", dl.name);
 	res = dl_load_func(&dl, "game_update", &dlf.game_update);

@@ -2,11 +2,13 @@
 
 #include <sys/stat.h>
 #include <dlfcn.h>
+#include <unistd.h>
 
 typedef struct {
 	char  *name;
+	char  *lock_file;
 	void  *ptr;
-	time_t    last_update;
+	time_t last_update;
 } DLStats;
 
 void func_stub() {}
@@ -29,6 +31,10 @@ b8 _dl_load_func(DLStats *dl, char* fn_name_dl, void(**fn)()) {
 // - `1`: dl changed
 // - `2`: failed to load new dl
 i32 dl_update(DLStats *dl) {
+    if (!access(dl->lock_file, F_OK)) {
+		return 0;
+    }
+
 	struct stat stats;
     if (stat(dl->name, &stats)) {
         log("File not found: %s", dl->name);

@@ -9,6 +9,7 @@ SLOW_FLAGS = -O0 -DFPS=30
 DEBUG_FLAGS = -DDBG -ggdb -fsanitize=address,undefined
 SDL_FLAGS = -lSDL3
 LINK_FLAGS = -lm
+DL_LOCK = build/lock_dll
 
 release: build
 	$(CC) -o build/release src/linux/first.cpp \
@@ -16,19 +17,25 @@ release: build
 		$(SDL_FLAGS) $(LINK_FLAGS)
 
 fast: build
+	touch $(DL_LOCK)
 	$(CC) -o build/game.so src/game.cpp \
 		$(FAST_FLAGS) -DDEV -shared -fpic \
 		$(LINK_FLAGS)
+	rm $(DL_LOCK)
 	$(CC) -o build/fast src/linux/first.cpp \
+		-DDL_LOCK_FILE=\"$(DL_LOCK)\" \
 		$(FAST_FLAGS) -DDEV \
 		$(SDL_FLAGS) $(LINK_FLAGS)
 
 debug: build 
+	touch $(DL_LOCK)
 	$(CC) -o build/game.so src/game.cpp \
 		$(SLOW_FLAGS) -DDEV -shared -fpic \
 		$(DEBUG_FLAGS) \
 		$(MILD_W_FLAGS)
+	rm $(DL_LOCK)
 	$(CC) -o build/debug src/linux/first.cpp \
+		-DDL_LOCK_FILE=\"$(DL_LOCK)\" \
 		$(SLOW_FLAGS) -DDEV \
 		$(DEBUG_FLAGS) \
 		$(MILD_W_FLAGS) \
