@@ -156,7 +156,7 @@ void draw_sdf_scene(GameState *state, Canvas *canvas) {
 // if state->th_pool.count < 2, than fallback on `draw_sdf_scene_multithread()`
 void draw_sdf_scene_multithread(GameState *state, Canvas *canvas) {
 	if (state->th_pool.count < 2) {
-		draw_sdf_scene_multithread(state, canvas);
+		return draw_sdf_scene_multithread(state, canvas);
 	}
 	// @Speed do not recompute sine and cosine of FOV_X and FOV_Y
 	f32 alpha_x = FOV_X/2;
