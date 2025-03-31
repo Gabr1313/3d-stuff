@@ -11,10 +11,7 @@
 
 #define PI 3.14159265358979323846f
 
-
 #include "game.h"
-
-#include <math.h>
 
 #include "linux/utils.cpp"
 #include "linux/threads.cpp"
@@ -81,5 +78,5 @@ extern "C" void game_update(GameState *state, Input* input, Canvas *canvas, Aren
 		update_camera(state, input);
 		update_position(state, input);
 	}
-	draw_sdf_scene_multithread(state, canvas, arena);
+	draw_sdf_scene_multithread(state, canvas);
 }

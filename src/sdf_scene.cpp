@@ -1,7 +1,5 @@
 #pragma once
 
-#include <atomic>
-
 #include "sdf.cpp"
 
 #define RAY_MARCH_MAX_ITERATION 100
@@ -88,17 +86,16 @@ void draw_pixel(GameState *state, u8 *pixel, Vec3 dir, f32 time) {
 }
 
 struct DrawLineArgs {
-	Canvas                *canvas;
-	GameState             *state;
-	// TODO: this has to go somewhere else... in linux/...
-	std::atomic<u32> *atomic_count;
+	Canvas     *canvas;
+	GameState  *state;
+	atomic_u32 *atomic_count;
 };
 
 void draw_pixel_lines(void *args) {
 	DrawLineArgs dla = *(DrawLineArgs*)args;
-	Canvas           *canvas       = dla.canvas;
-	GameState        *state        = dla.state;
-	std::atomic<u32> *atomic_count = dla.atomic_count;
+	Canvas     *canvas       = dla.canvas;
+	GameState  *state        = dla.state;
+	atomic_u32 *atomic_count = dla.atomic_count;
 	f32 alpha_x = FOV_X/2;
 	f32 alpha_y = alpha_x * f32(canvas->height) / f32(canvas->width);
 	assert(is_normalized(state->camera_left), "direction is not normalized");
@@ -127,7 +124,7 @@ void draw_pixel_lines(void *args) {
 	}
 } 
 
-void draw_sdf_scene(GameState *state, Canvas *canvas, Arena *arena) {
+void draw_sdf_scene(GameState *state, Canvas *canvas) {
 	// @Speed do not recompute sine and cosine of FOV_X and FOV_Y
 	f32 alpha_x = FOV_X/2;
 	f32 alpha_y = alpha_x * f32(canvas->height) / f32(canvas->width);
@@ -144,15 +141,6 @@ void draw_sdf_scene(GameState *state, Canvas *canvas, Arena *arena) {
 
 	Vec3 dir_left = camera_up_left;
 
-	if (state->lights.count == 0) {
-		u32 lights_count = 3;
-		Light *l = (Light*)arena_push(arena, sizeof(*l)*lights_count);
-		l[0] = (Light){{0, -5, 10}, 0.6f};
-		l[1] = (Light){{0, 10, 10}, 0.6f};
-		l[2] = (Light){{20, 0, -5}, 0.3f};
-		state->lights = {.e = l, .count = lights_count};
-	}
-
 	f32 time = f32(state->time_ns)*1e-9f;
 	for (u32 i = 0; i < canvas->height; ++i) {
 		Vec3 dir = dir_left;
@@ -165,7 +153,11 @@ void draw_sdf_scene(GameState *state, Canvas *canvas, Arena *arena) {
 	}
 }
 
-void draw_sdf_scene_multithread(GameState *state, Canvas *canvas, Arena *arena) {
+// if state->th_pool.count < 2, than fallback on `draw_sdf_scene_multithread()`
+void draw_sdf_scene_multithread(GameState *state, Canvas *canvas) {
+	if (state->th_pool.count < 2) {
+		draw_sdf_scene_multithread(state, canvas);
+	}
 	// @Speed do not recompute sine and cosine of FOV_X and FOV_Y
 	f32 alpha_x = FOV_X/2;
 	f32 alpha_y = alpha_x * f32(canvas->height) / f32(canvas->width);
@@ -178,16 +170,7 @@ void draw_sdf_scene_multithread(GameState *state, Canvas *canvas, Arena *arena) 
 	Vec3 camera_down_left  = rotate(state->camera,     state->camera_up,     alpha_x/2);
 	     camera_down_left  = rotate(camera_down_left,  state->camera_left,   alpha_y/2);
 
-	if (state->lights.count == 0) {
-		u32 lights_count = 3;
-		Light *l = (Light*)arena_push(arena, sizeof(*l)*lights_count);
-		l[0] = (Light){{0, -5, 10}, 0.6f};
-		l[1] = (Light){{0, 10, 10}, 0.6f};
-		l[2] = (Light){{20, 0, -5}, 0.3f};
-		state->lights = {.e = l, .count = lights_count};
-	}
-
-	std::atomic<u32> atomic_count = 0;
+	atomic_u32 atomic_count = 0;
 	DrawLineArgs args = {
 		.canvas = canvas,
 		.state  = state,
@@ -201,16 +184,5 @@ void draw_sdf_scene_multithread(GameState *state, Canvas *canvas, Arena *arena) 
 	for (u32 i = 0; i < state->th_pool.count; i++) {
 		thread_wait(&state->th_pool[i]);
 	}
-
-	// f32 time = f32(state->time_ns)*1e-9f;
-	// for (u32 i = 0; i < canvas->height; ++i) {
-	// 	Vec3 dir = dir_left;
-	// 	u32 delta_i = i * canvas->width;
-	// 	for (u32 j = 0; j < canvas->width; ++j) {
-	// 		draw_pixel(state, &canvas->pixels[(delta_i + j) * 4], dir, time);
-	// 		dir = dir + delta_x;
-	// 	}
-	// 	dir_left = dir_left+delta_y;
-	// }
 }
 

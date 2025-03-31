@@ -1,4 +1,4 @@
-#define SHOW_FPS 0
+#define SHOW_FPS 1
 #define FPS_PAUSE 30
 #define TITLE "Gabri's World"
 #define WIDTH  960
@@ -43,7 +43,6 @@ void read_input(Input *input, SDL_Window* window) {
 						input->quit = 1;
 					} break;
 					case SDLK_P: {
-						// TODO: time progress does not stop
 						input->paused ^= 1;
 						input->focused = !input->paused;
 						SDL_SetWindowRelativeMouseMode(window, input->focused);
@@ -110,24 +109,7 @@ void read_input(Input *input, SDL_Window* window) {
 	SDL_GetRelativeMouseState(&input->dmouse_x, &input->dmouse_y);
 }
 
-void present_pixels_1(u8** pixels, SDL_Renderer *renderer, SDL_Texture *texture) {
-	SDL_UnlockTexture(texture);
-
-	if (!SDL_RenderTexture(renderer, texture, 0, 0)) {
-		err("SDL could render texture! SDL_Error: %s\n", SDL_GetError());
-	}
-	if (!SDL_RenderPresent(renderer)) {
-		err("SDL could present the texture! SDL_Error: %s\n", SDL_GetError());
-	}
-
-	i32 pitch;
-	if (!SDL_LockTexture(texture, NULL, (void**)pixels, &pitch)) {
-		err("SDL could not unlock texture! SDL_Error: %s\n", SDL_GetError());
-	}
-	assert(pitch == texture->w * 4, "the pitch should be 4 times the texture width");
-}
-
-void present_pixels_2(u8* pixels, SDL_Renderer *renderer, SDL_Texture *texture) {
+void present_pixels(u8* pixels, SDL_Renderer *renderer, SDL_Texture *texture) {
 	if (!SDL_UpdateTexture(texture, 0, pixels, texture->w * 4)) {
 		err("SDL could not copy pixels to the texture: %s\n", SDL_GetError());
 	}
@@ -137,7 +119,23 @@ void present_pixels_2(u8* pixels, SDL_Renderer *renderer, SDL_Texture *texture) 
 	if (!SDL_RenderPresent(renderer)) {
 		err("SDL could present the texture! SDL_Error: %s\n", SDL_GetError());
 	}
-	dbg("here");
+}
+
+GameState* gamestate_new(Arena *arena, u32 thread_count) {
+	GameState *state = arena_push_struct_zero(arena, GameState);
+	state->vertical  = vec3(  0, 0, 1); // should be normalized
+	// NOTE(gabri): do not put this equals to game_state->vertical please
+	state->camera    = vec3(  1, 0, 0); // should be normalized
+	state->position  = vec3(  0, 0, 0);
+	state->th_pool   = threadpool_new(arena, thread_count);
+
+	state->lights.count = 3;
+	state->lights.e  = (Light*)arena_push(arena, sizeof(*state->lights.e)*state->lights.count);
+	state->lights[0] = (Light){{0, -5, 10}, 0.6f};
+	state->lights[1] = (Light){{0, 10, 10}, 0.6f};
+	state->lights[2] = (Light){{20, 0, -5}, 0.3f};
+
+	return state;
 }
 
 i32 main(void) {
@@ -162,6 +160,7 @@ i32 main(void) {
 	Canvas canvas = {};
 	canvas.width  = WIDTH;
 	canvas.height = HEIGHT;
+	canvas.pixels = (u8*)arena_push(&arena, 4 * canvas.width * canvas.height);
 
 	SDL_Window *window = NULL;
 	SDL_Renderer *renderer = NULL;
@@ -189,18 +188,8 @@ i32 main(void) {
 		return 1;
 	}
 
-	// TODO: decide between `present_pixels_1` and `present_pixels_2`
-	// if you choose `present_pixels_1`, then this allocation is useless,
-	//     (and uncomment the following please)
-	canvas.pixels = (u8*)arena_push(&arena, 4 * canvas.width * canvas.height);
-	// present_pixels_1(&canvas.pixels, renderer, texture);
-
 	Input input = {};
-	GameState *game_state = arena_push_struct_zero(&arena, GameState);
-	game_state->vertical  = vec3(  0, 0, 1);
-	game_state->camera    = vec3(  1, 0, 0); // do not put this equals to game_state->direction_up please
-	game_state->position  = vec3(  0, 0, 0);
-	game_state->th_pool   = threadpool_new(&arena, THREAD_COUNT);
+	GameState *game_state = gamestate_new(&arena, THREAD_COUNT);
 
 	DLFuncs dlf    = {};
 #ifdef DEV
@@ -233,6 +222,9 @@ i32 main(void) {
 		time_now = SDL_GetTicksNS();
 		game_state->time_ns = time_now - time_start;
 		input.dt = f32(time_now - time_prev_frame)*1e-9f;
+		if (input.paused) {
+			time_start += time_now - time_prev_frame;
+		}
 
 #if SHOW_FPS
 		log("FPS: %f", 1/input.dt);
@@ -257,11 +249,8 @@ i32 main(void) {
 #endif
 
 		dlf.game_update(game_state, &input, &canvas, &arena);
-#if 1
-		present_pixels_1(&canvas.pixels, renderer, texture);
-#else
-		present_pixels_2(canvas.pixels, renderer, texture);
-#endif
+		present_pixels(canvas.pixels, renderer, texture);
+
 		u64 tmp_time = SDL_GetTicksNS(); 
 		if (fps > 0 || input.paused) {
 			frame_end_ns += u64(1e9) / (fps > 0 ? fps : FPS_PAUSE);

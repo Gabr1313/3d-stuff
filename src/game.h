@@ -1,5 +1,6 @@
 #pragma once
 
+// TODO: remove this (or at least put this in `/linux/....cpp`)
 #include <math.h>
 
 #include "linux/utils.cpp"
@@ -63,4 +64,3 @@ struct GameState {
 	
 	ThreadPool th_pool;
 };
-

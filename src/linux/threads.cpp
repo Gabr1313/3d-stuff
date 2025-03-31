@@ -4,6 +4,9 @@
 #include "arena.cpp"
 #include <pthread.h>
 #include <semaphore.h>
+#include <atomic>
+
+typedef std::atomic<u32> atomic_u32 ;
 
 struct Thread {
 	void (*fn)(void*);
@@ -11,7 +14,7 @@ struct Thread {
 	void     *args;
 	sem_t     start;
 	sem_t     finished;
-	b1        stop; // TODO: should this be atomic?
+	b1        stop;
 };
 
 struct ThreadPool {
