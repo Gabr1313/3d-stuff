@@ -5,6 +5,7 @@
 #define HEIGHT 540
 #define WINDOW_INITIAL_POS_X 0
 #define WINDOW_INITIAL_POS_Y 0
+#define THREAD_COUNT 8
 
 #define DL_NAME "build/game.so"
 
@@ -24,7 +25,7 @@
 
 
 typedef struct {
-	void (*game_update)(GameState*, Input*, Canvas*);
+	void (*game_update)(GameState*, Input*, Canvas*, Arena*);
 } DLFuncs;
 
 void read_input(Input *input, SDL_Window* window) {
@@ -42,6 +43,7 @@ void read_input(Input *input, SDL_Window* window) {
 						input->quit = 1;
 					} break;
 					case SDLK_P: {
+						// TODO: time progress does not stop
 						input->paused ^= 1;
 						input->focused = !input->paused;
 						SDL_SetWindowRelativeMouseMode(window, input->focused);
@@ -193,11 +195,12 @@ i32 main(void) {
 	canvas.pixels = (u8*)arena_push(&arena, 4 * canvas.width * canvas.height);
 	// present_pixels_1(&canvas.pixels, renderer, texture);
 
-	GameState *game_state = arena_push_struct_zero(&arena, GameState);
-	game_state->vertical     = vec3(  0, 0, 1);
-	game_state->camera       = vec3(  1, 0, 0); // do not put this equals to game_state->direction_up please
-	game_state->position     = vec3(  0, 0, 0);
 	Input input = {};
+	GameState *game_state = arena_push_struct_zero(&arena, GameState);
+	game_state->vertical  = vec3(  0, 0, 1);
+	game_state->camera    = vec3(  1, 0, 0); // do not put this equals to game_state->direction_up please
+	game_state->position  = vec3(  0, 0, 0);
+	game_state->th_pool   = threadpool_new(&arena, THREAD_COUNT);
 
 	DLFuncs dlf    = {};
 #ifdef DEV
@@ -222,7 +225,7 @@ i32 main(void) {
 
 	// display the first frame
 	input.focused = 1;
-	dlf.game_update(game_state, &input, &canvas);
+	dlf.game_update(game_state, &input, &canvas, &arena);
 	input.focused = 0;
 
 	while (true) {
@@ -247,13 +250,13 @@ i32 main(void) {
 			assert(res, "Could not load dynamic library function %s", dl.name);
 			if (input.paused) {
 				input.paused ^= 1;
-				dlf.game_update(game_state, &input, &canvas);
+				dlf.game_update(game_state, &input, &canvas, &arena);
 				input.paused ^= 1;
 			}
 		}
 #endif
 
-		dlf.game_update(game_state, &input, &canvas);
+		dlf.game_update(game_state, &input, &canvas, &arena);
 #if 1
 		present_pixels_1(&canvas.pixels, renderer, texture);
 #else
@@ -273,7 +276,10 @@ i32 main(void) {
 		} 
 	}
 
-	// NOTE(gabri): The OS could take care of them for me
+	// NOTE(gabri): The OS could take care of the memory for me
+	for (u32 i = 0; i < game_state->th_pool.count; i++) {
+		thread_stop(&game_state->th_pool[i]);
+	}
 	arena_release(&arena);
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);

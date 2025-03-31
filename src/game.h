@@ -4,18 +4,19 @@
 
 #include "linux/utils.cpp"
 #include "linux/arena.cpp"
+#include "linux/threads.cpp"
 
 #include "types.h"
 
 #include "vec.cpp"
 
-typedef struct {
+struct Canvas {
 	u8* pixels;
 	u32 width;
 	u32 height;
-} Canvas;
+};
 
-typedef struct {
+struct Input {
 	f32 dt;
 
 	b1 quit;
@@ -32,9 +33,23 @@ typedef struct {
 	f32 dmouse_wheel;
 	f32 dmouse_x;
 	f32 dmouse_y;
-} Input;
+};
 
-typedef struct {
+struct Light {
+	Vec3 dir;
+	f32 intensity;
+};
+
+struct Lights {
+	Light *e;
+	u32 count;
+	Light &operator[](u32 i) {
+		assert(i < count, "overflow");
+		return e[i];
+	}
+};
+
+struct GameState {
 	u64 time_ns;
 
 	Vec3 camera;
@@ -43,5 +58,9 @@ typedef struct {
 	Vec3 vertical;
 
 	Vec3 position;
-} GameState;
+
+	Lights lights;
+	
+	ThreadPool th_pool;
+};
 
