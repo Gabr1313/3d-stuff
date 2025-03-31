@@ -1,11 +1,9 @@
-#define SHOW_FPS 1
+#define SHOW_FPS     0
+#define THREAD_COUNT 8
 #define FPS_PAUSE 30
 #define TITLE "Gabri's World"
 #define WIDTH  960
 #define HEIGHT 540
-#define WINDOW_INITIAL_POS_X 0
-#define WINDOW_INITIAL_POS_Y 0
-#define THREAD_COUNT 8
 
 #define DL_NAME "build/game.so"
 
@@ -172,12 +170,6 @@ i32 main(void) {
 		err("Couldn't create window and renderer: %s", SDL_GetError());
 		return 1;
 	}
-
-#ifdef DEV
-	if (!SDL_SetWindowPosition(window, WINDOW_INITIAL_POS_X, WINDOW_INITIAL_POS_Y)) {
-		log("Window can't be repositioned: %s", SDL_GetError());
-	}
-#endif
 
 	SDL_Texture *texture = SDL_CreateTexture(renderer,
 		 SDL_PIXELFORMAT_ARGB8888,
