@@ -18,8 +18,9 @@ typedef struct {
 typedef struct {
 	f32 dt;
 
-	b1 running;
-	b1 pause;
+	b1 quit;
+	b1 paused;
+	b1 focused;
 
 	b1 forward;
 	b1 backward;

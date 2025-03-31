@@ -18,6 +18,7 @@ For compiling this project, you need:
 - `D` move right
 - `E` move up
 - `F` move down
+- `P` pause
 - `X` exit
 - `ESC` exit
 - `MOUSE-LEFT` focus/unfocus the window

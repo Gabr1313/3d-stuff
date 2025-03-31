@@ -7,6 +7,7 @@
 #include "vec.cpp"
 #include "quat.cpp"
 #include "sdf.cpp"
+#include "linux/threads.cpp"
 
 #define VELOCITY 10
 #define MOUSE_SENSE 0.0015f
@@ -179,7 +180,12 @@ void update_position(GameState *state, Input *input) {
 }
 
 extern "C" void game_update(GameState *state, Input* input, Canvas *canvas) {
-	update_camera(state, input);
-	update_position(state, input);
+	if (input->paused) {
+		return;
+	}
+	if (input->focused) {
+		update_camera(state, input);
+		update_position(state, input);
+	}
 	draw(state, canvas);
 }

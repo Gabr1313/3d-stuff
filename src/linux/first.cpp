@@ -6,7 +6,7 @@
 #define WINDOW_INITIAL_POS_X 0
 #define WINDOW_INITIAL_POS_Y 0
 
-#define DL_NAME      "build/game.so"
+#define DL_NAME "build/game.so"
 
 #include <SDL3/SDL.h>
 #include <errno.h>
@@ -33,43 +33,41 @@ void read_input(Input *input, SDL_Window* window) {
 	while (SDL_PollEvent(&event) != 0) {
 		switch (event.type) {
 			case SDL_EVENT_QUIT: {
-				input->running = 0;
+				input->quit = 1;
 			} break;
 			case SDL_EVENT_KEY_DOWN: {
 				switch (event.key.key) {
 					case SDLK_X:
 					case SDLK_ESCAPE: {
-						input->running = false;
+						input->quit = 1;
 					} break;
 					case SDLK_P: {
-						input->pause ^= 1;
+						input->paused ^= 1;
+						input->focused = !input->paused;
+						SDL_SetWindowRelativeMouseMode(window, input->focused);
 					} break;
 					case SDLK_W: {
-						input->forward = true;
+						input->forward = 1;
 					} break;
 					case SDLK_A: {
-						input->left = true;
+						input->left = 1;
 					} break;
 					case SDLK_S: {
-						input->backward = true;
+						input->backward = 1;
 					} break;
 					case SDLK_D: {
-						input->right = true;
+						input->right = 1;
 					} break;
 					case SDLK_Q: {
-						input->down = true;
+						input->down = 1;
 					} break;
 					case SDLK_E: {
-						input->up = true;
+						input->up = 1;
 					} break;
 				}
 			} break;
 			case SDL_EVENT_KEY_UP: {
 				switch (event.key.key) {
-					case SDLK_X:
-					case SDLK_ESCAPE: {
-						input->running = true;
-					} break;
 					case SDLK_W: {
 						input->forward = false;
 					} break;
@@ -92,8 +90,9 @@ void read_input(Input *input, SDL_Window* window) {
 			} break;
 			case SDL_EVENT_MOUSE_BUTTON_DOWN: {
 				switch (event.button.button) {
-					case SDL_BUTTON_LEFT: { // focus
-						SDL_SetWindowRelativeMouseMode(window, !SDL_GetWindowRelativeMouseMode(window));
+					case SDL_BUTTON_LEFT: {
+						input->focused = !SDL_GetWindowRelativeMouseMode(window);
+						SDL_SetWindowRelativeMouseMode(window, input->focused);
 					} break;
 				}
 			} break;
@@ -199,7 +198,6 @@ i32 main(void) {
 	game_state->camera       = vec3(  1, 0, 0); // do not put this equals to game_state->direction_up please
 	game_state->position     = vec3(  0, 0, 0);
 	Input input = {};
-	input.running = true;
 
 	DLFuncs dlf    = {};
 #ifdef DEV
@@ -221,7 +219,13 @@ i32 main(void) {
 	u64 time_start       = SDL_GetTicksNS();
 	u64 time_now         = time_start;
 	u64 frame_end_ns     = time_start;
-	while (input.running) {
+
+	// display the first frame
+	input.focused = 1;
+	dlf.game_update(game_state, &input, &canvas);
+	input.focused = 0;
+
+	while (true) {
 		u64 time_prev_frame = time_now;
 		time_now = SDL_GetTicksNS();
 		game_state->time_ns = time_now - time_start;
@@ -232,6 +236,7 @@ i32 main(void) {
 #endif
 
 		read_input(&input, window);
+		if (input.quit) break;
 
 #ifdef DEV
 		res = dl_update(&dl);
@@ -240,22 +245,22 @@ i32 main(void) {
 			log("Dynamic Library reloaded: %s", dl.name);
 			res = dl_load_func(&dl, "game_update", &dlf.game_update);
 			assert(res, "Could not load dynamic library function %s", dl.name);
-			if (input.pause) {
+			if (input.paused) {
+				input.paused ^= 1;
 				dlf.game_update(game_state, &input, &canvas);
+				input.paused ^= 1;
 			}
 		}
 #endif
 
-		if (!input.pause) {
-			dlf.game_update(game_state, &input, &canvas);
-		}
+		dlf.game_update(game_state, &input, &canvas);
 #if 1
 		present_pixels_1(&canvas.pixels, renderer, texture);
 #else
 		present_pixels_2(canvas.pixels, renderer, texture);
 #endif
 		u64 tmp_time = SDL_GetTicksNS(); 
-		if (fps > 0 || input.pause) {
+		if (fps > 0 || input.paused) {
 			frame_end_ns += u64(1e9) / (fps > 0 ? fps : FPS_PAUSE);
 			if (frame_end_ns > tmp_time) {
 				// dbg("Extra time: %fms", f32(frame_end_ns - tmp_time)*1e-6f);
