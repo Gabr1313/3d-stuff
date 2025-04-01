@@ -1,6 +1,9 @@
 #define SHOW_FPS     0
 #define THREAD_COUNT 8
 #define FPS_PAUSE 30
+		if (input.paused) 
+			time_start += time_now - time_prev_frame;
+		}
 #define TITLE "Gabri's World"
 #define WIDTH  960
 #define HEIGHT 540
@@ -214,16 +217,17 @@ i32 main(void) {
 		time_now = SDL_GetTicksNS();
 		game_state->time_ns = time_now - time_start;
 		input.dt = f32(time_now - time_prev_frame)*1e-9f;
-		if (input.paused) {
+		if (input.paused) 
 			time_start += time_now - time_prev_frame;
 		}
-
 #if SHOW_FPS
 		log("FPS: %f", 1/input.dt);
 #endif
 
 		read_input(&input, window);
-		if (input.quit) break;
+		if (input.quit) {
+			break;
+		}
 
 #ifdef DEV
 		res = dl_update(&dl);

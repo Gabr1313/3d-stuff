@@ -9,56 +9,83 @@
 
 #define FOV_X (90.f * PI / 180)
 
-static inline f32 sdf_scene(Vec3 position, f32 time) {
+// returns r-g-b-distance
+static inline Vec4 sdf_scene(Vec3 position, f32 time) {
+	f32  dist       = 1e9;
+	Vec4 color_dist = vec4(0, 0, 0, dist);
+	Vec3 beige      = vec3( 1.0, 0.85, 0.7 );
+	Vec3 red        = vec3(0.58, 0.05, 0.01);
+	Vec3 green      = vec3(0.31, 0.49, 0.1 );
+	Vec3 blue       = vec3(0.25, 0.41, 0.88);
+	Vec3 orange     = vec3(0.92, 0.51, 0.11);
 #if 0
-	f32 dist = sdf_sphere(position - vec3(10, 0, 0), 1);
+	dist = sdf_sphere(position - vec3(10, 0, 0), 1);
+	color_dist = sdf_union(color_dist, vec4(beige, dist));
 #else
-	f32 dist = sdf_box_round(rotate(position - vec3(10, 0, 0), vec3(0,0,1), time/4), vec3(1, 1, .2f), 0.2f);
 #if 0
-	dist     = sdf_union(dist, sdf_sphere(position - vec3(10, 0, 2), 0.8f));
-	dist     = sdf_union(dist, sdf_sphere(position - vec3(-10, 0, 0), 0.8f));
+	dist       = sdf_box_round(rotate(position - vec3(10, 0, 0), vec3(0,0,1), time/4), vec3(1, 1, .2), 0.2);
+	color_dist = sdf_union(color_dist, vec4(beige, dist));
+
+	dist       = sdf_sphere(position - vec3(10, 0, 2), 0.8);
+	color_dist = sdf_union(color_dist, vec4(green, dist));
+
+	dist       = sdf_sphere(position - vec3(-10, 0, 0), 0.8);
+	color_dist = sdf_union(color_dist, vec4(red, dist));
 #else
-	dist     = sdf_sub(dist, sdf_cylinder(position - vec3(10, 0, 0), 0.8f));
+	dist       = sdf_box_round(rotate(position - vec3(10, 0, 0), vec3(0,0,1), time/4), vec3(1, 1, .2), 0.2);
+	color_dist = sdf_union(color_dist, vec4(orange, dist));
 
-	f32 dist2 = sdf_cylinder(position - vec3(10, 0, 0), 0.2f);
-	dist2     = sdf_inter(dist2, sdf_box(position - vec3(10, 0, 0), vec3(1, 1, 2)));
-	dist      = sdf_union(dist, dist2);
+	dist       = sdf_cylinder(position - vec3(10, 0, 0), 0.8);
+	color_dist = sdf_sub(color_dist, vec4(orange, dist));
 
-	dist2     = sdf_sphere(position - vec3(10 + 4*cosf(time), 0, 0), 0.2f);
-	dist2     = sdf_union_smooth(dist2, sdf_sphere(position - vec3(10, 4*sinf(time), 0), 0.2f), 1.0f);
-	dist2     = sdf_union_smooth(dist2, sdf_sphere(position - vec3(10 + 4*cosf(time), 4*sinf(time), 0), 0.2f), 1.0f);
-	dist      = sdf_union_smooth(dist, dist2, 2.0f);
+	Vec4 color_dist_2;
+
+	dist         = sdf_cylinder(position - vec3(10, 0, 0), 0.2);
+	color_dist_2 = vec4(beige, dist);
+	dist         = sdf_box(position - vec3(10, 0, 0), vec3(1, 1, 2));
+	color_dist_2 = sdf_inter(color_dist_2, vec4(beige, dist));
+	color_dist   = sdf_union(color_dist, color_dist_2);
+
+	dist         = sdf_sphere(position - vec3(10 + 4*cosf(time), 4*sinf(time), 0), 0.2);
+	color_dist_2 = vec4(green, dist);
+	dist         = sdf_sphere(position - vec3(10, 4*sinf(time), 0), 0.2);
+	color_dist_2 = sdf_union_smooth(color_dist_2, vec4(red, dist), 1.0);
+	dist         = sdf_sphere(position - vec3(10 + 4*cosf(time), 0, 0), 0.2);
+	color_dist_2 = sdf_union_smooth(color_dist_2, vec4(blue, dist), 1.0);
+	color_dist   = sdf_union_smooth(color_dist, color_dist_2, 2.0);
 #endif
 #endif
-	return dist;
+	return color_dist;
 }
 
 static inline Vec3 scene_normal(Vec3 position, f32 time) {
 	f32 delta = GRADIENT_EPS;
 	return normalize(vec3(
-		sdf_scene(position + vec3(delta, 0, 0), time) - sdf_scene(position - vec3(delta, 0, 0), time),
-		sdf_scene(position + vec3(0, delta, 0), time) - sdf_scene(position - vec3(0, delta, 0), time),
-		sdf_scene(position + vec3(0, 0, delta), time) - sdf_scene(position - vec3(0, 0, delta), time)
+		sdf_scene(position + vec3(delta, 0, 0), time).w - sdf_scene(position - vec3(delta, 0, 0), time).w,
+		sdf_scene(position + vec3(0, delta, 0), time).w - sdf_scene(position - vec3(0, delta, 0), time).w,
+		sdf_scene(position + vec3(0, 0, delta), time).w - sdf_scene(position - vec3(0, 0, delta), time).w
 	));
 }
 
 struct ContactPoint {
-	Vec3 point;
 	b1 hit;
+	Vec3 point;
+	Vec3 color;
 };
 
 static inline ContactPoint scene_march_ray(Vec3 position, Vec3 direction, f32 time) {
 	assert(is_normalized(direction), "direction is not normalized");
 	for (i32 i = 0; i < RAY_MARCH_MAX_ITERATION; ++i) {
-		f32 dist = sdf_scene(position, time);
+		Vec4 color_dist = sdf_scene(position, time);
+		f32 dist = color_dist.w;
 		position = position + dist*direction;
 		if (dist < RAY_MARCH_DIST_MIN) {
-			return (ContactPoint){position, 1};
+			return (ContactPoint){1, position, xyz(color_dist)};
 		} else if (length2(position) > WORLD_MAX_OBJ_DIST*WORLD_MAX_OBJ_DIST) {
-			return (ContactPoint){vec3(0), 0};
+			return (ContactPoint){0, vec3(0), vec3(0)};
 		}
 	}
-	return (ContactPoint){vec3(0), 0};
+	return (ContactPoint){0, vec3(0), vec3(0)};
 }
 
 void draw_pixel(GameState *state, u8 *pixel, Vec3 dir, f32 time) {
@@ -77,7 +104,7 @@ void draw_pixel(GameState *state, u8 *pixel, Vec3 dir, f32 time) {
 			total_light += state->lights[i].intensity * light;
 		}
 
-		col = color(total_light * vec3(1.0f, 0.85f, 0.7f), 0xff);
+		col = color(total_light * cp.color, 0xff);
 	}
 	pixel[0] = col.b;
 	pixel[1] = col.g;

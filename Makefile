@@ -2,7 +2,7 @@ CC = g++
 W_FLAGS = -Wall -Wextra -Wconversion -Wshadow -Wstrict-overflow -Wfloat-equal \
 	-Wformat=2 -Wstrict-aliasing -Wcast-align \
 	-Wpointer-arith -Wundef -Wnull-dereference \
-	-Wno-write-strings
+	-Wno-write-strings -Wno-float-conversion
 MILD_W_FLAGS = $(W_FLAGS) -Wno-unused-variable -Wno-unused-parameter
 EXTRA_W_FLAGS = $(W_FLAGS) -fanalyzer -Wno-analyzer-null-dereference
 FAST_FLAGS = -O3 -march=native -ffast-math 

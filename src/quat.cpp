@@ -1,6 +1,6 @@
 #pragma once
 
-#define QUAT_EPS VEC3_EPS
+#define QUAT_EPS VEC_EPS
 
 struct Quat {
 	f32 r, i, j, k;

@@ -36,5 +36,5 @@ static inline f32 clamp(f32 a, f32 mn, f32 mx) {
 }
 
 static inline f32 mix(f32 a, f32 b, f32 k) {
-	return k*a + (1.0f-k)*b;
+	return (1.0f-k)*a + k*b;
 }
