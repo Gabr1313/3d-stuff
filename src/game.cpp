@@ -71,7 +71,7 @@ void update_position(GameState *state, Input *input) {
 }
 
 extern "C" void game_update(GameState *state, Input* input, Canvas *canvas, Arena *arena) {
-	if (input->paused) {
+	if (input->frozen) {
 		return;
 	}
 	if (input->focused) {

@@ -1,9 +1,6 @@
 #define SHOW_FPS     0
 #define THREAD_COUNT 8
 #define FPS_PAUSE 30
-		if (input.paused) 
-			time_start += time_now - time_prev_frame;
-		}
 #define TITLE "Gabri's World"
 #define WIDTH  960
 #define HEIGHT 540
@@ -43,9 +40,14 @@ void read_input(Input *input, SDL_Window* window) {
 					case SDLK_ESCAPE: {
 						input->quit = 1;
 					} break;
-					case SDLK_P: {
+					case SDLK_R: {
 						input->paused ^= 1;
-						input->focused = !input->paused;
+						input->frozen &= input->paused;
+					} break;
+					case SDLK_F: {
+						input->frozen ^= 1;
+						input->paused |= input->frozen;
+						input->focused = !input->frozen;
 						SDL_SetWindowRelativeMouseMode(window, input->focused);
 					} break;
 					case SDLK_W: {
@@ -215,11 +217,11 @@ i32 main(void) {
 	while (true) {
 		u64 time_prev_frame = time_now;
 		time_now = SDL_GetTicksNS();
-		game_state->time_ns = time_now - time_start;
 		input.dt = f32(time_now - time_prev_frame)*1e-9f;
-		if (input.paused) 
+		if (input.paused || input.frozen) {
 			time_start += time_now - time_prev_frame;
 		}
+		game_state->time_ns = time_now - time_start;
 #if SHOW_FPS
 		log("FPS: %f", 1/input.dt);
 #endif
@@ -236,10 +238,10 @@ i32 main(void) {
 			log("Dynamic Library reloaded: %s", dl.name);
 			res = dl_load_func(&dl, "game_update", &dlf.game_update);
 			assert(res, "Could not load dynamic library function %s", dl.name);
-			if (input.paused) {
-				input.paused ^= 1;
+			if (input.frozen) {
+				input.frozen ^= 1;
 				dlf.game_update(game_state, &input, &canvas, &arena);
-				input.paused ^= 1;
+				input.frozen ^= 1;
 			}
 		}
 #endif
@@ -248,7 +250,7 @@ i32 main(void) {
 		present_pixels(canvas.pixels, renderer, texture);
 
 		u64 tmp_time = SDL_GetTicksNS(); 
-		if (fps > 0 || input.paused) {
+		if (fps > 0 || input.frozen) {
 			frame_end_ns += u64(1e9) / (fps > 0 ? fps : FPS_PAUSE);
 			if (frame_end_ns > tmp_time) {
 				// dbg("Extra time: %fms", f32(frame_end_ns - tmp_time)*1e-6f);

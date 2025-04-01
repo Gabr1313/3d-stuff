@@ -17,10 +17,14 @@ For compiling this project, you need:
 - `S` move backward
 - `D` move right
 - `E` move up
-- `F` move down
-- `P` pause
+- `Q` move down
+
+- `R` pause gameplay (camera still moves)
+- `F` freeze gameplay (do not refresh)
+
 - `X` exit
 - `ESC` exit
+
 - `MOUSE-LEFT` focus/unfocus the window
 - `MOUSE-WHEEL` roll camera
 

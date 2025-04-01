@@ -22,6 +22,7 @@ struct Input {
 
 	b1 quit;
 	b1 paused;
+	b1 frozen;
 	b1 focused;
 
 	b1 forward;
