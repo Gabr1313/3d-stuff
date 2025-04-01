@@ -46,7 +46,6 @@ void read_input(Input *input, SDL_Window* window) {
 					} break;
 					case SDLK_F: {
 						input->frozen ^= 1;
-						input->paused |= input->frozen;
 						input->focused = !input->frozen;
 						SDL_SetWindowRelativeMouseMode(window, input->focused);
 					} break;
