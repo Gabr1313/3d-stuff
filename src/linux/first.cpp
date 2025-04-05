@@ -21,6 +21,21 @@
 #include "../game.cpp"
 #endif
 
+#define scc(code)                           \
+	do {                                    \
+		if (int(code) < 0) {                \
+			err("SDL: %s", SDL_GetError()); \
+			exit(1);                        \
+		}                                   \
+	} while(0)
+#define scp(pointer)                        \
+	do {                                    \
+		if (pointer == 0) {                 \
+			err("SDL: %s", SDL_GetError()); \
+			exit(1);                        \
+		}                                   \
+	} while(0)
+
 
 typedef struct {
 	void (*game_update)(GameState*, Input*, Canvas*, Arena*);
@@ -29,7 +44,7 @@ typedef struct {
 void read_input(Input *input, SDL_Window* window) {
 	SDL_Event event;
 	f32 dmouse_wheel = 0;
-	while (SDL_PollEvent(&event) != 0) {
+	while (SDL_PollEvent(&event)) {
 		switch (event.type) {
 			case SDL_EVENT_QUIT: {
 				input->quit = 1;
@@ -112,15 +127,9 @@ void read_input(Input *input, SDL_Window* window) {
 }
 
 void present_pixels(u8* pixels, SDL_Renderer *renderer, SDL_Texture *texture) {
-	if (!SDL_UpdateTexture(texture, 0, pixels, texture->w * 4)) {
-		err("SDL could not copy pixels to the texture: %s\n", SDL_GetError());
-	}
-	if (!SDL_RenderTexture(renderer, texture, 0, 0)) {
-		err("SDL could not copy pixels from texture to renderer: %s\n", SDL_GetError());
-	}
-	if (!SDL_RenderPresent(renderer)) {
-		err("SDL could present the texture! SDL_Error: %s\n", SDL_GetError());
-	}
+	scc(SDL_UpdateTexture(texture, 0, pixels, texture->w * 4));
+	scc(SDL_RenderTexture(renderer, texture, 0, 0));
+	scc(SDL_RenderPresent(renderer));
 }
 
 GameState* gamestate_new(Arena *arena, u32 thread_count) {
@@ -154,10 +163,7 @@ i32 main(void) {
 	}
 
 	// Initialize SDL
-	if (!SDL_Init(SDL_INIT_VIDEO)) {
-		err("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
-		return 1;
-	}
+	scc(SDL_Init(SDL_INIT_VIDEO));
 
 	Canvas canvas = {};
 	canvas.width  = WIDTH;
@@ -170,19 +176,13 @@ i32 main(void) {
 #ifdef DEV
 	window_flags |= SDL_WINDOW_ALWAYS_ON_TOP;
 #endif
-	if (!SDL_CreateWindowAndRenderer(TITLE, (i32)canvas.width, (i32)canvas.height, window_flags, &window, &renderer)) {
-		err("Couldn't create window and renderer: %s", SDL_GetError());
-		return 1;
-	}
+	scc(SDL_CreateWindowAndRenderer(TITLE, (i32)canvas.width, (i32)canvas.height, window_flags, &window, &renderer));
 
 	SDL_Texture *texture = SDL_CreateTexture(renderer,
-		 SDL_PIXELFORMAT_ARGB8888,
+		 SDL_PIXELFORMAT_ABGR8888,
 		 SDL_TEXTUREACCESS_STREAMING,
 		 i32(canvas.width), i32(canvas.height));
-	if (!texture) {
-		err("Couldn't create texture: %s", SDL_GetError());
-		return 1;
-	}
+	scp(texture);
 
 	Input input = {};
 	GameState *game_state = gamestate_new(&arena, THREAD_COUNT);

@@ -106,9 +106,9 @@ void draw_pixel(GameState *state, u8 *pixel, Vec3 dir, f32 time) {
 
 		col = color(total_light * cp.color, 0xff);
 	}
-	pixel[0] = col.b;
+	pixel[0] = col.r;
 	pixel[1] = col.g;
-	pixel[2] = col.r;
+	pixel[2] = col.b;
 	pixel[3] = col.a;
 }
 
